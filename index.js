@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import cors from 'cors'
 import sequelize from './config/database.js'
 import User from './models/User.js'
+import bcrypt from 'bcrypt'
 
 const port = 3000;
 const app = express();
@@ -28,9 +29,22 @@ app.listen(port, () => {
 })
 
 app.post("/submit", async(req, res) =>{
-  // if (req.body){
-  //   try{
-  //     await User.create({name: })
-  //   }
-  // }
+  if (req.body){
+    console.log("Data transmitted to backend successfully")
+    try{
+      await User.create({
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        email: req.body.email,
+        password: req.body.password,
+        role: req.body.role
+      })
+      res.send('success')
+    }catch(err){
+      console.log(err.message)
+    }
+
+  }else{
+    console.log("There is no Data")
+  }
 })

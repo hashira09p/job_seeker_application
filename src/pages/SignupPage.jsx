@@ -7,16 +7,18 @@ import Footer from "@/components/Footer";
 import Breadcrumb from "@/components/Breadcrumb";
 import axios from "axios";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function SignupPage() {
   const URL = "http://localhost:3000";
+  const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
-    role: "", // Added role to match the select input
+    role: "",
   });
 
   const handleChange = (e) => {
@@ -29,17 +31,20 @@ function SignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios({
-        url: `${URL}/submit`,
-        method: "post",
-        data: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        },
+      const result = await axios({
+          url: `${URL}/submit`,
+          method: "post",
+          data: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            password: formData.password,
+            role: formData.role,
+          },
       });
+      console.log(result)
+      navigate("/login")
+      
     } catch (err) {
       console.log(err.message);
     }
