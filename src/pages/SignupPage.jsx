@@ -44,7 +44,6 @@ function SignupPage() {
       });
       console.log(result)
       navigate("/login")
-      
     } catch (err) {
       console.log(err.message);
     }
