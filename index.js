@@ -4,6 +4,12 @@ import cors from 'cors';
 import sequelize from './config/database.js';
 import User from './models/User.js';
 import bcrypt from 'bcrypt';
+import passport from 'passport';
+import GoogleStrategy from 'passport-google-oauth2'
+import dotenv from "dotenv"
+import { env } from 'process';
+
+dotenv.config()
 
 const port = 3000;
 const app = express();
@@ -24,6 +30,42 @@ async function authenticate(){
 }
 
 authenticate();
+
+app.get("/auth/google",
+  passport.authenticate("google",
+    {
+    scope: ["email", "profile" ],
+    }
+  )
+)
+
+app.get("/auth/google/app",
+  passport.authenticate("google",{
+    successRedirect:"/",
+    failureRedirect:"/signup"
+  })
+)
+
+passport.use("google", new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL
+},
+async(request, accessToken, refreshToken, profile, done) => {
+  try{
+    const result = await User.findOne({
+      where:{
+        email: profile.email
+      }
+    })
+    
+    console.log(result)
+  }catch(err){
+    console.log(err.message)
+  }
+}
+))
+
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`)
