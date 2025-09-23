@@ -33,6 +33,7 @@
     "dotenv": "^17.2.2",
     "embla-carousel-react": "^8.6.0",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.539.0",

@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 function SignupPage() {
   const URL = "http://localhost:3000";
+  
   const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
@@ -48,15 +49,6 @@ function SignupPage() {
       console.log(err.message);
     }
   };
-
-  const googleSubmit = async() => {
-    console.log("hello")
-    try{
-      await axios.get(`${URL}/auth/google`)
-    }catch(err){
-      console.log(err.message);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-background">

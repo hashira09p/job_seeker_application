@@ -8,6 +8,7 @@ import passport from 'passport';
 import GoogleStrategy from 'passport-google-oauth2'
 import dotenv from "dotenv"
 import { env } from 'process';
+import session from 'express-session';
 
 dotenv.config()
 
@@ -15,6 +16,16 @@ const port = 3000;
 const app = express();
 const saltRounds = 15;
 
+app.use(session(
+  {
+    secret:'secret',
+    resave:false,
+    saveUninitialized: false
+  }
+))
+
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.json());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -41,10 +52,11 @@ app.get("/auth/google",
 
 app.get("/auth/google/app",
   passport.authenticate("google",{
-    successRedirect:"/",
+    successRedirect:"http://localhost:5173/",
     failureRedirect:"/signup"
   })
 )
+
 
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -53,18 +65,58 @@ passport.use("google", new GoogleStrategy({
 },
 async(request, accessToken, refreshToken, profile, done) => {
   try{
+
+    console.log(profile)
+
     const result = await User.findOne({
       where:{
         email: profile.email
       }
     })
-    
-    console.log(result)
+
+    if(result){
+      return done(null, profile)
+    }
+
+    await User.create({
+      fullName: `${profile.name.givenName} ${profile.name.familyName}`,
+      email: profile.email,
+      password: "google"
+    })
+
+    return done(null, profile)
+
   }catch(err){
     console.log(err.message)
   }
 }
 ))
+
+passport.serializeUser(async(profile, done) => {
+
+  const user = await User.findOne({
+    where: {
+      email: profile.email
+    }
+  })
+  console.log(user.id)
+  return done(null, user.id)
+})
+
+passport.deserializeUser(async(id, done) => {
+  try{
+    
+    const user = await User.findByPk(id)
+    if(!user){
+      return done(null, false)
+    }
+
+    done(null,user)
+
+  }catch(err){
+    console.log(err.message)
+  }
+})
 
 
 app.listen(port, () => {
@@ -100,7 +152,8 @@ app.post("/submit", async (req, res) => {
           lastName: lastName,
           email: email,
           password: hash,
-          role: role
+          role: role,
+          fullName: `${firstName} ${lastName}`
         });
         console.log("Saved success")
         res.send("Saved Success");
