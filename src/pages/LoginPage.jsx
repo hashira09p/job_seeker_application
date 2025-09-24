@@ -7,51 +7,52 @@ import Footer from '@/components/Footer'
 import Breadcrumb from '@/components/Breadcrumb'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState } from 'react'
+import axios from "axios"
 
 
 function LoginPage() {
   const URL = "http://localhost:3000";
-
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: ""
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+      [e.target.name]:e.target.value
+    })
+  }
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
 
-    try {
-      await login(formData.email, formData.password);
-      navigate('/'); // Redirect to home page after successful login
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
+    try{
+      const result = await axios.post(`${URL}/submit-login`,{
+        email: formData.email,
+        password: formData.password
+      });
+
+      const data = result.data
+
+      if(data.success){
+        navigate("/")
+      }
+    }catch(err){
+      console.log(err.response.data.message);
+
+      if(err.response.data.message == "unregistered"){
+        navigate("/signup")
+      }else{
+        navigate("/login")
+      }
     }
   };
-
-  const googleSubmit = async() => {
-    console.log("hello")
-    try{
-      await axios.get(`${URL}/auth/google`)
-    }catch(err){
-      console.log(err.message);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -123,7 +123,7 @@ app.listen(port, () => {
   console.log(`Server is running in port ${port}`)
 })
 
-app.post("/submit", async (req, res) => {
+app.post("/submit-register", async (req, res) => {
   try {
     const { firstName, lastName, email, password, role } = req.body;
 
@@ -166,3 +166,35 @@ app.post("/submit", async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 });
+
+app.post("/submit-login", async(req, res) => {
+  const {email, password} = req.body
+
+  try{
+    const user= await User.findOne({
+      where:{
+        email: email
+      }
+    })
+
+    console.log(user)
+    console.log(user.password);
+    
+    if (user == null) { 
+      console.log("User not registered.")
+      return res.status(400).json({success:false, message: "unregistered"})
+    }
+
+    await bcrypt.compare(password, user.password, async(err, result) => {
+      console.log(result)
+      if (result){
+        console.log(result)
+        res.status(200).json({success: true, message: "success"})
+      }else{
+        res.status(400).json({success: false, message: "wrong password"})
+      }
+    })
+  }catch(err){
+    console.log(err.message)
+  }
+})

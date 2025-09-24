@@ -4,22 +4,6 @@ import axios from "axios"
 import {useState}  from "react"
 
 const Input = React.forwardRef(({ className, type, ...props }, ref) => {
-   const [formData, setFormData] = useState({
-    firstName: "",
-    email: "",
-    password: "",
-  });
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async () => {
-    // TODO: implement submit logic
-  };
   return (
     <input
       type={type}

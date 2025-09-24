@@ -33,7 +33,7 @@ function SignupPage() {
     e.preventDefault();
     try {
       const result = await axios({
-          url: `${URL}/submit`,
+          url: `${URL}/submit-register`,
           method: "post",
           data: {
             firstName: formData.firstName,
