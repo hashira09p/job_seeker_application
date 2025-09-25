@@ -178,7 +178,7 @@ app.post("/submit-login", async(req, res) => {
     })
 
     console.log(user)
-    console.log(user.password);
+    // console.log(user.password);
     
     if (user == null) { 
       console.log("User not registered.")

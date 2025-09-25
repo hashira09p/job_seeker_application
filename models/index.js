@@ -1,4 +1,5 @@
-'use strict';
+import User from "./User"
+import Companies from "./companies";
 
 const fs = require('fs');
 const path = require('path');
@@ -41,3 +42,6 @@ db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
 module.exports = db;
+
+User.belongsTo(Companies,{foreignKey: companyId})
+Companies.hasMany(User,{foreignKey: companyId})
