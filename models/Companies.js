@@ -7,11 +7,16 @@ Companies.init({
     name: DataTypes.STRING,
     description: DataTypes.STRING,
     industry: DataTypes.STRING,
-    website: DataTypes.STRING
+    website: DataTypes.STRING,
+    userID: DataTypes.INTEGER
 },{
     sequelize,
     modelName: 'Companies',
     timestamps: true
 });
+
+Companies.associate = (models) => {
+    Companies.belongsTo(models.Users,{foreignKey: "userID", as: "users"})
+}
 
 export default Companies;

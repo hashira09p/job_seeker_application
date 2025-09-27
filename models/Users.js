@@ -1,9 +1,9 @@
 import sequelize from "../config/database.js";
 import { DataTypes, Model } from "sequelize";
 
-class User extends Model {}
+class Users extends Model {}
 
-User.init({
+Users.init({
     firstName: DataTypes.STRING,
     lastName: DataTypes.STRING,
     email: DataTypes.STRING,
@@ -12,8 +12,12 @@ User.init({
     fullName: DataTypes.STRING
 },{
     sequelize,
-    modelName: "User",
+    modelName: "Users",
     timestamps: true
 })
 
-export default User;
+Users.associate = (models) => {
+    Users.hasOne(models.Company,{foreignKey: "userID", as: "company"})
+}
+
+export default Users;

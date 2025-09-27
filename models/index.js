@@ -42,6 +42,3 @@ db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
 module.exports = db;
-
-User.belongsTo(Companies,{foreignKey: companyId})
-Companies.hasMany(User,{foreignKey: companyId})
