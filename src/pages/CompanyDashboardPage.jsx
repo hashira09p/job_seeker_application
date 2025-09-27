@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/ui/data-table"
 import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -38,7 +46,8 @@ import {
 import { 
   Users, 
   UserPlus, 
-  Briefcase, 
+  Briefcase,
+  BriefcaseMedical, 
   FileText, 
   TrendingUp, 
   Search,
@@ -115,6 +124,11 @@ function CompanyDashboardPage() {
       title: "Settings",
       icon: Settings,
       view: "settings"
+    },
+    {
+      title: "Create Job Posting",
+      icon: BriefcaseMedical,
+      view: "create-job-posting"
     }
   ]
 
@@ -502,6 +516,8 @@ function CompanyDashboardPage() {
         return renderResumeParser()
       case 'settings':
         return renderSettingsView()
+      case 'create-job-posting':
+        return renderCreateJobPosting()
       default:
         return renderDashboard()
     }
@@ -951,6 +967,73 @@ function CompanyDashboardPage() {
     </div>
   )
 
+  const  renderCreateJobPosting = () => {
+    return(
+      <form class="space-y-6 p-4 max-w-lg mx-auto">
+  <div>
+    <label class="block text-sm font-medium mb-2">Job Title</label>
+    <input
+      type="text"
+      name="title"
+      placeholder="e.g. Software Engineer"
+      required
+      class="w-full border rounded p-2"
+    />
+  </div>
+
+ 
+  <div>
+    <label class="block text-sm font-medium mb-2">Description</label>
+    <textarea
+      name="description"
+      placeholder="Write job description here..."
+      required
+      class="w-full border rounded p-2"
+    ></textarea>
+  </div>
+
+  
+  <div>
+    <label class="block text-sm font-medium mb-2">Location</label>
+    <input
+      type="text"
+      name="location"
+      placeholder="e.g. Manila, Remote"
+      class="w-full border rounded p-2"
+    />
+  </div>
+
+  
+  <div>
+    <label class="block text-sm font-medium mb-2">Job Type</label>
+    <select name="job_type" class="w-full border rounded p-2" required>
+      <option value="">Select job type</option>
+      <option value="Full-time">Full-time</option>
+      <option value="Part-time">Part-time</option>
+      <option value="Remote">Remote</option>
+      <option value="Contract">Contract</option>
+    </select>
+  </div>
+
+  
+  <div>
+    <label class="block text-sm font-medium mb-2">Salary Range</label>
+    <input
+      type="text"
+      name="salary_range"
+      placeholder="e.g. ₱30,000 - ₱50,000"
+      class="w-full border rounded p-2"
+    />
+  </div>
+
+  
+  <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded">
+    Post Job
+  </button>
+</form>
+    )
+}
+
   const renderSettingsView = () => (
     <Card className="shadow-lg border-0">
       <CardHeader>
@@ -966,6 +1049,7 @@ function CompanyDashboardPage() {
       </CardContent>
     </Card>
   )
+
 
   return (
     <SidebarProvider>

@@ -2,13 +2,15 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import sequelize from './config/database.js';
-import User from './models/User.js';
 import bcrypt from 'bcrypt';
 import passport from 'passport';
 import GoogleStrategy from 'passport-google-oauth2'
 import dotenv from "dotenv"
 import { env } from 'process';
 import session from 'express-session';
+import Users from './models/Users.js';
+import Companies from './models/Companies.js';
+import { profile } from 'console';
 
 dotenv.config()
 
@@ -68,7 +70,7 @@ async(request, accessToken, refreshToken, profile, done) => {
 
     console.log(profile)
 
-    const result = await User.findOne({
+    const result = await Users.findOne({
       where:{
         email: profile.email
       }
@@ -78,7 +80,7 @@ async(request, accessToken, refreshToken, profile, done) => {
       return done(null, profile)
     }
 
-    await User.create({
+    await Users.create({
       fullName: `${profile.name.givenName} ${profile.name.familyName}`,
       email: profile.email,
       password: "google"
@@ -94,7 +96,7 @@ async(request, accessToken, refreshToken, profile, done) => {
 
 passport.serializeUser(async(profile, done) => {
 
-  const user = await User.findOne({
+  const user = await Users.findOne({
     where: {
       email: profile.email
     }
@@ -106,7 +108,7 @@ passport.serializeUser(async(profile, done) => {
 passport.deserializeUser(async(id, done) => {
   try{
     
-    const user = await User.findByPk(id)
+    const user = await Users.findByPk(id)
     if(!user){
       return done(null, false)
     }
@@ -123,9 +125,13 @@ app.listen(port, () => {
   console.log(`Server is running in port ${port}`)
 })
 
-app.post("/submit", async (req, res) => {
+app.post("/submit-register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password, role, companyName, description } = req.body;
+
+    console.log(companyName);
+    console.log(description);
+    console.log(role)
 
     if (!email || !password) {
       res.status(400).json({ success: false, message: "Email and password are required" });
@@ -133,7 +139,7 @@ app.post("/submit", async (req, res) => {
       return;
     }
 
-    const result = await User.findOne({
+    const result = await Users.findOne({
       where: {
         email: email
       }
@@ -147,7 +153,7 @@ app.post("/submit", async (req, res) => {
 
     bcrypt.hash(password, saltRounds, async function (err, hash) {
       if (!err) {
-        await User.create({
+        const result=await Users.create({
           firstName: firstName,
           lastName: lastName,
           email: email,
@@ -155,14 +161,57 @@ app.post("/submit", async (req, res) => {
           role: role,
           fullName: `${firstName} ${lastName}`
         });
-        console.log("Saved success")
+          
+        if(role == "Employer"){
+          await Companies.create({
+            name: companyName,
+            description: description,
+            userID: result.id
+          })
+        }
+        
+        console.log(result.id)
         res.send("Saved Success");
       } else {
         console.log(err.message);
         res.status(400).json({ success: false, message: err.message });
       }
     });
+
+    
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
 });
+
+app.post("/submit-login", async(req, res) => {
+  const {email, password} = req.body
+
+  try{
+    const user= await Users.findOne({
+      where:{
+        email: email
+      }
+    })
+
+    console.log(user)
+    // console.log(user.password);
+    
+    if (user == null) { 
+      console.log("User not registered.")
+      return res.status(400).json({success:false, message: "unregistered"})
+    }
+
+    await bcrypt.compare(password, user.password, async(err, result) => {
+      console.log(result)
+      if (result){
+        console.log(result)
+        res.status(200).json({success: true, message: "success"})
+      }else{
+        res.status(400).json({success: false, message: "wrong password"})
+      }
+    })
+  }catch(err){
+    console.log(err.message)
+  }
+})

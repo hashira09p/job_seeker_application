@@ -1,4 +1,5 @@
-'use strict';
+import User from "./User"
+import Companies from "./companies";
 
 const fs = require('fs');
 const path = require('path');
