@@ -38,9 +38,12 @@ function LoginPage() {
       });
 
       const data = result.data
-
-      if(data.success){
-        navigate("/")
+      if(data.role == "User"){
+        localStorage.setItem("token", data.token);
+        navigate("/");
+      }else{
+        navigate("/company-dashboard");
+        localStorage.setItem("token", data.token);
       }
     }catch(err){
       console.log(err.response.data.message);
