@@ -142,7 +142,7 @@ passport.deserializeUser(async(id, done) => {
 // Register
 app.post("/submit-register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role, companyName, description } = req.body;
+    const { firstName, lastName, description, companyName, email,password, role, industry,  website, arrangement} = req.body;
 
     console.log(companyName);
     console.log(description);
@@ -181,7 +181,10 @@ app.post("/submit-register", async (req, res) => {
           await Companies.create({
             name: companyName,
             description: description,
-            userID: result.id
+            userID: result.id,
+            industry: industry,
+            website: website,
+            arrangement: arrangement
           })
         }
         

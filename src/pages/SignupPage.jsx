@@ -21,6 +21,9 @@ function SignupPage() {
     email: "",
     password: "",
     role: "",
+    industry: "",
+    website: "",
+    arrangement: ""
   });
 
   const handleChange = (e) => {
@@ -43,7 +46,10 @@ function SignupPage() {
           password: formData.password,
           role: formData.role,
           companyName: formData.companyName,
-          description: formData.description
+          description: formData.description,
+          industry: formData.industry,
+          website: formData.website,
+          arrangement: formData.arrangement
         },
       });
       console.log(result);
@@ -432,6 +438,66 @@ function SignupPage() {
                     value={formData.description}
                   />
                 </div>
+                
+                <div>
+                  <label
+                    htmlFor="industry"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
+                    Industry
+                  </label>
+                  <Input
+                    type="text"
+                    id="industry"
+                    name="industry"
+                    placeholder="ex. IT, Utilites, .etc"
+                    required
+                    onChange={handleChange}
+                    value={formData.industry}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="website"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
+                    Website
+                  </label>
+                  <Input
+                    type="text"
+                    id="website"
+                    name="website"
+                    placeholder="ex. www.website.com (optional)"
+                    onChange={handleChange}
+                    value={formData.website}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="arrangement"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
+                    Role
+                  </label>
+                  <select
+                    id="arrangement"
+                    name="arrangement"
+                    required
+                    className="w-full rounded-md border border-gray-300 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    onChange={handleChange}
+                    value={formData.arrangement}
+                  >
+                    <option value="">Select an arrangement</option>
+                    <option value="On-site">On-site</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="Remote">Remote</option>
+                    <option value="Flexible">Flexible</option>
+
+                  </select>
+                </div>
+
 
                 <div className="flex items-start">
                   <input

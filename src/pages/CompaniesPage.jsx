@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Combobox } from "@/components/ui/combobox"
-import { Search, MapPin } from "lucide-react"
+import { Search } from "lucide-react"
 import Navigation from "@/components/Navigation"
 import Footer from "@/components/Footer"
 import Breadcrumb from "@/components/Breadcrumb"
@@ -17,28 +17,39 @@ import axios from "axios"
 
 function CompaniesPage() {
   const [industry, setIndustry] = useState("")
+  const [workArrangement, setWorkArrangement] = useState("")
   const [sortBy, setSortBy] = useState("name")
   const [search, setSearch] = useState("")
   const URL = "http://localhost:3000"
   const [dataFromDB, setDataFromDB] = useState([])
+  const [industryOptions, setIndustryOptions] = useState([{
+    value:""
+  }])
+
 
   useEffect(() => {
     async function getData() {
       try {
+        console.log(industryOptions)
         const freshData = await axios.get(`${URL}/companies`)
         setDataFromDB(freshData.data.result)
+        setIndustryOptions([{}])
+
+        
       } catch (err) {
         console.log(err.message)
       }
     }
     getData()
-  }, [])
+    
+  }, [setIndustryOptions])
 
   // --- Filtering logic ---
   const filteredCompanies = dataFromDB
     .filter(
       (c) =>
         (!industry || (c.industry && c.industry === industry)) &&
+        (!workArrangement || (c.arrangement && c.arrangement === workArrangement)) &&
         (!search ||
           c.name.toLowerCase().includes(search.toLowerCase()) ||
           (c.industry && c.industry.toLowerCase().includes(search.toLowerCase())))
@@ -55,12 +66,19 @@ function CompaniesPage() {
     })
 
   // --- Options ---
-  const industryOptions = [
-    { value: "technology", label: "Technology" },
-    { value: "healthcare", label: "Healthcare" },
-    { value: "finance", label: "Finance & Banking" },
-    { value: "education", label: "Education" },
-    { value: "energy", label: "Energy & Utilities" }
+  // const industryOptions = [
+  //   { value: "technology", label: "Technology" },
+  //   { value: "healthcare", label: "Healthcare" },
+  //   { value: "finance", label: "Finance & Banking" },
+  //   { value: "education", label: "Education" },
+  //   { value: "energy", label: "Energy & Utilities" }
+  // ]
+
+  const workArrangementOptions = [
+    { value: "onsite", label: "On-site" },
+    { value: "hybrid", label: "Hybrid" },
+    { value: "remote", label: "Remote" },
+    { value: "flexible", label: "Flexible" }
   ]
 
   const sortOptions = [
@@ -107,10 +125,21 @@ function CompaniesPage() {
                   Industry
                 </label>
                 <Combobox
-                  options={industryOptions}
+                  options={dataFromDB.industry}
                   value={industry}
                   onValueChange={setIndustry}
                   placeholder="All Industries"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Work Arrangement
+                </label>
+                <Combobox
+                  options={workArrangementOptions}
+                  value={workArrangement}
+                  onValueChange={setWorkArrangement}
+                  placeholder="All Arrangements"
                 />
               </div>
             </div>
@@ -146,6 +175,7 @@ function CompaniesPage() {
                 <Button
                   onClick={() => {
                     setIndustry("")
+                    setWorkArrangement("")
                     setSearch("")
                   }}
                 >
@@ -167,6 +197,9 @@ function CompaniesPage() {
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
                       Industry: {c.industry || "N/A"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Work Arrangement: {c.arrangement || "N/A"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Website: {c.website || "N/A"}
