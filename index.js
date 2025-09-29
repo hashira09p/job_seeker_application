@@ -12,6 +12,7 @@ import Users from './models/Users.js';
 import Companies from './models/Companies.js';
 import { profile } from 'console';
 import jwt from "jsonwebtoken"
+import { Trophy } from 'lucide-react';
 
 dotenv.config()
 
@@ -60,11 +61,6 @@ function authenticateToken(req, res, next) {
 }
 
 authenticate();
-
-app.get("/company-dashboard", authenticateToken, (req, res) => {
-  console.log(req.headers)
-  res.json({ message: "Welcome to dashboard!", user: req.user });
-});
 
 app.get("/auth/google",
   passport.authenticate("google",
@@ -116,6 +112,7 @@ async(request, accessToken, refreshToken, profile, done) => {
 }
 ))
 
+//Serialize and Deserialize
 passport.serializeUser(async(profile, done) => {
 
   const user = await Users.findOne({
@@ -142,6 +139,7 @@ passport.deserializeUser(async(id, done) => {
   }
 })
 
+// Register
 app.post("/submit-register", async (req, res) => {
   try {
     const { firstName, lastName, email, password, role, companyName, description } = req.body;
@@ -201,6 +199,8 @@ app.post("/submit-register", async (req, res) => {
   }
 });
 
+
+//Login
 app.post("/submit-login", async(req, res) => {
   const {email, password} = req.body
 
@@ -235,6 +235,22 @@ app.post("/submit-login", async(req, res) => {
     console.log(err.message)
   }
 })
+
+//Company Page for Emplo
+app.get("/company-dashboard", authenticateToken, (req, res) => {
+  console.log(req.headers)
+  res.json({ message: "Welcome to dashboard!", user: req.user });
+});
+
+app.get("/companies", async(req,res) => {
+  try{
+    const result = await Companies.findAll()
+    res.status(200).json({success:true, result})
+  }catch(err){
+    console.log(result)
+  }
+})
+
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`)
