@@ -11,12 +11,15 @@ import session from 'express-session';
 import Users from './models/Users.js';
 import Companies from './models/Companies.js';
 import { profile } from 'console';
+import jwt from "jsonwebtoken"
+import { Trophy } from 'lucide-react';
 
 dotenv.config()
 
 const port = 3000;
 const app = express();
 const saltRounds = 15;
+const JWT_SECRET = "just_a_secret"
 
 app.use(session(
   {
@@ -29,7 +32,10 @@ app.use(session(
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // your React frontend
+  credentials: true
+}));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 async function authenticate(){
@@ -40,6 +46,18 @@ async function authenticate(){
   }catch(err){
     console.log(err.message);
   }
+}
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
 }
 
 authenticate();
@@ -54,7 +72,7 @@ app.get("/auth/google",
 
 app.get("/auth/google/app",
   passport.authenticate("google",{
-    successRedirect:"http://localhost:5173/",
+    successRedirect:"http://localhost:3000/",
     failureRedirect:"/signup"
   })
 )
@@ -94,6 +112,7 @@ async(request, accessToken, refreshToken, profile, done) => {
 }
 ))
 
+//Serialize and Deserialize
 passport.serializeUser(async(profile, done) => {
 
   const user = await Users.findOne({
@@ -120,14 +139,10 @@ passport.deserializeUser(async(id, done) => {
   }
 })
 
-
-app.listen(port, () => {
-  console.log(`Server is running in port ${port}`)
-})
-
+// Register
 app.post("/submit-register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role, companyName, description } = req.body;
+    const { firstName, lastName, description, companyName, email,password, role, industry,  website, arrangement} = req.body;
 
     console.log(companyName);
     console.log(description);
@@ -166,7 +181,10 @@ app.post("/submit-register", async (req, res) => {
           await Companies.create({
             name: companyName,
             description: description,
-            userID: result.id
+            userID: result.id,
+            industry: industry,
+            website: website,
+            arrangement: arrangement
           })
         }
         
@@ -184,6 +202,8 @@ app.post("/submit-register", async (req, res) => {
   }
 });
 
+
+//Login
 app.post("/submit-login", async(req, res) => {
   const {email, password} = req.body
 
@@ -193,9 +213,10 @@ app.post("/submit-login", async(req, res) => {
         email: email
       }
     })
+    
+    const role = user.role
 
     console.log(user)
-    // console.log(user.password);
     
     if (user == null) { 
       console.log("User not registered.")
@@ -205,8 +226,10 @@ app.post("/submit-login", async(req, res) => {
     await bcrypt.compare(password, user.password, async(err, result) => {
       console.log(result)
       if (result){
-        console.log(result)
-        res.status(200).json({success: true, message: "success"})
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" })
+
+        console.log(`eto ang ${token}`);
+        res.status(200).json({success: true, message: "success", token, role})
       }else{
         res.status(400).json({success: false, message: "wrong password"})
       }
@@ -214,4 +237,24 @@ app.post("/submit-login", async(req, res) => {
   }catch(err){
     console.log(err.message)
   }
+})
+
+//Company Page for Emplo
+app.get("/company-dashboard", authenticateToken, (req, res) => {
+  console.log(req.headers)
+  res.json({ message: "Welcome to dashboard!", user: req.user });
+});
+
+app.get("/companies", async(req,res) => {
+  try{
+    const result = await Companies.findAll()
+    res.status(200).json({success:true, result})
+  }catch(err){
+    console.log(result)
+  }
+})
+
+
+app.listen(port, () => {
+  console.log(`Server is running in port ${port}`)
 })

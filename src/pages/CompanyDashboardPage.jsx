@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -83,12 +83,15 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import axios from "axios"
+import { useNavigate } from 'react-router-dom'
 
 function CompanyDashboardPage() {
   const [activeView, setActiveView] = useState('dashboard')
   const [selectedApplicant, setSelectedApplicant] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedJob, setSelectedJob] = useState(null)
+  const navigate = useNavigate()
   
   // Resume Parser states
   const [uploadedFile, setUploadedFile] = useState(null)
@@ -98,6 +101,21 @@ function CompanyDashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [parsedData, setParsedData] = useState(null)
+
+  useEffect(() => {
+    async function fetchData(){
+      const token = localStorage.getItem("token");
+      console.log(token)
+      if (!token) {
+        navigate("/login"); 
+      } else {
+        await axios.get(`${URL}/company-dashboard`,
+        {headers:{ Authorization: `Bearer ${token}` }})
+      }
+    }
+
+    fetchData();
+  }, []);
 
   const sidebarItems = [
     {
@@ -967,72 +985,72 @@ function CompanyDashboardPage() {
     </div>
   )
 
-  const  renderCreateJobPosting = () => {
-    return(
-      <form class="space-y-6 p-4 max-w-lg mx-auto">
-  <div>
-    <label class="block text-sm font-medium mb-2">Job Title</label>
-    <input
-      type="text"
-      name="title"
-      placeholder="e.g. Software Engineer"
-      required
-      class="w-full border rounded p-2"
-    />
-  </div>
+  const renderCreateJobPosting = () => {
+    return (
+      <form className="space-y-6 p-4 max-w-lg mx-auto">
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Title</label>
+          <input
+            type="text"
+            name="title"
+            placeholder="e.g. Software Engineer"
+            required
+            className="w-full border rounded p-2"
+          />
+        </div>
 
  
-  <div>
-    <label class="block text-sm font-medium mb-2">Description</label>
-    <textarea
-      name="description"
-      placeholder="Write job description here..."
-      required
-      class="w-full border rounded p-2"
-    ></textarea>
-  </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Description</label>
+          <Textarea
+            name="description"
+            placeholder="Write job description here..."
+            required
+            className="w-full border rounded p-2"
+          />
+        </div>
 
   
-  <div>
-    <label class="block text-sm font-medium mb-2">Location</label>
-    <input
-      type="text"
-      name="location"
-      placeholder="e.g. Manila, Remote"
-      class="w-full border rounded p-2"
-    />
-  </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Location</label>
+          <input
+            type="text"
+            name="location"
+            placeholder="e.g. Manila, Remote"
+            className="w-full border rounded p-2"
+          />
+        </div>
 
   
-  <div>
-    <label class="block text-sm font-medium mb-2">Job Type</label>
-    <select name="job_type" class="w-full border rounded p-2" required>
-      <option value="">Select job type</option>
-      <option value="Full-time">Full-time</option>
-      <option value="Part-time">Part-time</option>
-      <option value="Remote">Remote</option>
-      <option value="Contract">Contract</option>
-    </select>
-  </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Type</label>
+          <select name="job_type" className="w-full border rounded p-2" required>
+            <option value="">Select job type</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Remote">Remote</option>
+            <option value="Contract">Contract</option>
+          </select>
+        </div>
 
   
-  <div>
-    <label class="block text-sm font-medium mb-2">Salary Range</label>
-    <input
-      type="text"
-      name="salary_range"
-      placeholder="e.g. ₱30,000 - ₱50,000"
-      class="w-full border rounded p-2"
-    />
-  </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Salary Range</label>
+          <input
+            type="text"
+            name="salary_range"
+            placeholder="e.g. ₱30,000 - ₱50,000"
+            className="w-full border rounded p-2"
+          />
+        </div>
 
   
-  <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded">
-    Post Job
-  </button>
-</form>
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
+          Post Job
+        </button>
+      </form>
     )
-}
+  }
 
   const renderSettingsView = () => (
     <Card className="shadow-lg border-0">
