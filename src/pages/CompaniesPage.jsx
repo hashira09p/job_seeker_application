@@ -22,27 +22,27 @@ function CompaniesPage() {
   const [search, setSearch] = useState("")
   const URL = "http://localhost:3000"
   const [dataFromDB, setDataFromDB] = useState([])
-  const [industryOptions, setIndustryOptions] = useState([{
-    value:""
-  }])
-
+  const [industryOptions, setIndustryOptions] = useState([])
 
   useEffect(() => {
     async function getData() {
       try {
-        console.log(industryOptions)
         const freshData = await axios.get(`${URL}/companies`)
-        setDataFromDB(freshData.data.result)
-        setIndustryOptions([{}])
+        const companies = freshData.data.result
+        setDataFromDB(companies)
 
-        
+        // build unique industry options dynamically
+        const uniqueIndustries = [
+          ...new Set(companies.map((c) => c.industry).filter(Boolean))
+        ].map((ind) => ({ value: ind, label: ind }))
+
+        setIndustryOptions(uniqueIndustries)
       } catch (err) {
         console.log(err.message)
       }
     }
     getData()
-    
-  }, [setIndustryOptions])
+  }, [])
 
   // --- Filtering logic ---
   const filteredCompanies = dataFromDB
@@ -66,14 +66,6 @@ function CompaniesPage() {
     })
 
   // --- Options ---
-  // const industryOptions = [
-  //   { value: "technology", label: "Technology" },
-  //   { value: "healthcare", label: "Healthcare" },
-  //   { value: "finance", label: "Finance & Banking" },
-  //   { value: "education", label: "Education" },
-  //   { value: "energy", label: "Energy & Utilities" }
-  // ]
-
   const workArrangementOptions = [
     { value: "onsite", label: "On-site" },
     { value: "hybrid", label: "Hybrid" },
@@ -125,7 +117,7 @@ function CompaniesPage() {
                   Industry
                 </label>
                 <Combobox
-                  options={dataFromDB.industry}
+                  options={industryOptions}
                   value={industry}
                   onValueChange={setIndustry}
                   placeholder="All Industries"
