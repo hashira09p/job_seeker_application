@@ -8,14 +8,15 @@ import GoogleStrategy from 'passport-google-oauth2'
 import dotenv from "dotenv"
 import { env } from 'process';
 import session from 'express-session';
-import Users from './models/Users.js';
-import Companies from './models/Companies.js';
+import db from './models/index.js';
 import { profile } from 'console';
 import jwt from "jsonwebtoken"
 import { Trophy } from 'lucide-react';
 
+
 dotenv.config()
 
+const {Users, Companies} = db
 const port = 3000;
 const app = express();
 const saltRounds = 15;
@@ -51,6 +52,7 @@ async function authenticate(){
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
+  console.log(token)
   if (!token) return res.sendStatus(401);
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -216,7 +218,7 @@ app.post("/submit-login", async(req, res) => {
     
     const role = user.role
 
-    console.log(user)
+    // console.log(user)
     
     if (user == null) { 
       console.log("User not registered.")
@@ -224,11 +226,8 @@ app.post("/submit-login", async(req, res) => {
     }
 
     await bcrypt.compare(password, user.password, async(err, result) => {
-      console.log(result)
       if (result){
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" })
-
-        console.log(`eto ang ${token}`);
         res.status(200).json({success: true, message: "success", token, role})
       }else{
         res.status(400).json({success: false, message: "wrong password"})
@@ -239,18 +238,30 @@ app.post("/submit-login", async(req, res) => {
   }
 })
 
-//Company Page for Emplo
-app.get("/company-dashboard", authenticateToken, (req, res) => {
-  console.log(req.headers)
-  res.json({ message: "Welcome to dashboard!", user: req.user });
+//Company Page for Employer
+app.get("/company-dashboard", authenticateToken, async(req, res) => {
+  const result = await Companies.findOne({ 
+    where:{
+      userID: req.user.id,
+    },
+    include: {
+      model: Users,
+      as: "user"
+    }
+  })
+  
+  console.log((result.user.firstName))
+
+
+  res.json({ message: "Welcome to dashboard!", user: req.user, company: result["name"], fullName: result.user.fullName})
 });
 
-app.get("/companies", async(req,res) => {
+app.get("/companies", async(req, res) => {
   try{
     const result = await Companies.findAll()
     res.status(200).json({success:true, result})
   }catch(err){
-    console.log(result)
+    console.log(err.message)
   }
 })
 

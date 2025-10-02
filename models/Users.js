@@ -1,5 +1,6 @@
 import sequelize from "../config/database.js";
 import { DataTypes, Model } from "sequelize";
+import Companies from "./Companies.js";
 
 class Users extends Model {}
 
@@ -17,7 +18,7 @@ Users.init({
 })
 
 Users.associate = (models) => {
-    Users.hasOne(models.Company,{foreignKey: "userID", as: "company"})
+    Users.hasOne(models.Companies,{foreignKey: "userID", as: "company"})
 }
 
 export default Users;

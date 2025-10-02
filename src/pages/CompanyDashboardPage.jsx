@@ -92,6 +92,7 @@ function CompanyDashboardPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedJob, setSelectedJob] = useState(null)
   const navigate = useNavigate()
+  const URL = "http://localhost:3000"
   
   // Resume Parser states
   const [uploadedFile, setUploadedFile] = useState(null)
@@ -101,6 +102,8 @@ function CompanyDashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [parsedData, setParsedData] = useState(null)
+  const [company, setCompany] = useState(null)
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
     async function fetchData(){
@@ -109,8 +112,12 @@ function CompanyDashboardPage() {
       if (!token) {
         navigate("/login"); 
       } else {
-        await axios.get(`${URL}/company-dashboard`,
+        const result = await axios.get(`${URL}/company-dashboard`,
         {headers:{ Authorization: `Bearer ${token}` }})
+        
+        setCompany(result.data.company)
+        setUser(result.data.fullName)
+        console.log(user,"hello")
       }
     }
 
@@ -1080,7 +1087,7 @@ function CompanyDashboardPage() {
               </div>
               <div>
                 <h2 className="font-semibold text-lg">Company Dashboard</h2>
-                <p className="text-xs text-muted-foreground">Una sa Trabaho Philippines</p>
+                <p className="text-xs text-muted-foreground">{company}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -1113,7 +1120,7 @@ function CompanyDashboardPage() {
                 <Building className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">TechCorp Philippines</p>
+                <p className="text-sm font-medium">{user}</p>
                 <p className="text-xs text-muted-foreground">HR Manager</p>
               </div>
             </div>
