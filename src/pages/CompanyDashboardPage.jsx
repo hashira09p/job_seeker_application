@@ -91,6 +91,8 @@ function CompanyDashboardPage() {
   const [selectedApplicant, setSelectedApplicant] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedJob, setSelectedJob] = useState(null)
+  const [isEditJobOpen, setIsEditJobOpen] = useState(false)
+  const [editingJob, setEditingJob] = useState(null)
   const navigate = useNavigate()
   const URL = "http://localhost:3000"
   
@@ -104,6 +106,57 @@ function CompanyDashboardPage() {
   const [parsedData, setParsedData] = useState(null)
   const [company, setCompany] = useState(null)
   const [user, setUser] = useState(null)
+  const [createJobPosting, setCreateJobPosting] = useState({
+    title: "",
+    description: "",
+    location: "",
+    jobType: "",
+    salaryMin: "",
+    salaryMax: ""
+  })
+
+  // Job postings state
+  const [jobPostings, setJobPostings] = useState([
+    { 
+      id: 1, 
+      title: 'Senior Software Engineer', 
+      company: 'UnasaTrabaho', 
+      applicants: 25, 
+      status: 'active', 
+      postedDate: '2025-01-15', 
+      salary: '₱80,000 - ₱120,000',
+      location: 'Makati City, Metro Manila',
+      type: 'Full Time',
+      description: 'We are looking for a Senior Software Engineer to join our dynamic team. You will be responsible for developing and maintaining high-quality software solutions.',
+      requirements: ['React', 'Node.js', 'TypeScript', 'AWS', '5+ years experience']
+    },
+    { 
+      id: 2, 
+      title: 'Marketing Specialist', 
+      company: 'TechCorp Philippines', 
+      applicants: 18, 
+      status: 'active', 
+      postedDate: '2025-01-12', 
+      salary: '₱35,000 - ₱50,000',
+      location: 'Quezon City, Metro Manila',
+      type: 'Full Time',
+      description: 'Join our marketing team and help us grow our brand presence in the Philippine market.',
+      requirements: ['Digital Marketing', 'Social Media', 'Content Creation', 'Analytics', '2+ years experience']
+    },
+    { 
+      id: 3, 
+      title: 'Customer Service Representative', 
+      company: 'TechCorp Philippines', 
+      applicants: 32, 
+      status: 'closed', 
+      postedDate: '2025-01-08', 
+      salary: '₱25,000 - ₱35,000',
+      location: 'Taguig City, Metro Manila',
+      type: 'Full Time',
+      description: 'Provide excellent customer support and help resolve customer inquiries.',
+      requirements: ['Communication Skills', 'Problem Solving', 'Customer Service', 'English Proficiency']
+    }
+  ])
 
   useEffect(() => {
     async function fetchData(){
@@ -154,49 +207,6 @@ function CompanyDashboardPage() {
       title: "Create Job Posting",
       icon: BriefcaseMedical,
       view: "create-job-posting"
-    }
-  ]
-
-  // Mock data for job postings
-  const jobPostings = [
-    { 
-      id: 1, 
-      title: 'Senior Software Engineer', 
-      company: 'UnasaTrabaho', 
-      applicants: 25, 
-      status: 'active', 
-      postedDate: '2025-01-15', 
-      salary: '₱80,000 - ₱120,000',
-      location: 'Makati City, Metro Manila',
-      type: 'Full Time',
-      description: 'We are looking for a Senior Software Engineer to join our dynamic team. You will be responsible for developing and maintaining high-quality software solutions.',
-      requirements: ['React', 'Node.js', 'TypeScript', 'AWS', '5+ years experience']
-    },
-    { 
-      id: 2, 
-      title: 'Marketing Specialist', 
-      company: 'TechCorp Philippines', 
-      applicants: 18, 
-      status: 'active', 
-      postedDate: '2025-01-12', 
-      salary: '₱35,000 - ₱50,000',
-      location: 'Quezon City, Metro Manila',
-      type: 'Full Time',
-      description: 'Join our marketing team and help us grow our brand presence in the Philippine market.',
-      requirements: ['Digital Marketing', 'Social Media', 'Content Creation', 'Analytics', '2+ years experience']
-    },
-    { 
-      id: 3, 
-      title: 'Customer Service Representative', 
-      company: 'TechCorp Philippines', 
-      applicants: 32, 
-      status: 'closed', 
-      postedDate: '2025-01-08', 
-      salary: '₱25,000 - ₱35,000',
-      location: 'Taguig City, Metro Manila',
-      type: 'Full Time',
-      description: 'Provide excellent customer support and help resolve customer inquiries.',
-      requirements: ['Communication Skills', 'Problem Solving', 'Customer Service', 'English Proficiency']
     }
   ]
 
@@ -304,6 +314,26 @@ function CompanyDashboardPage() {
     }
   }
 
+  // Job posting functions
+  const handleEditJob = (job) => {
+    setEditingJob(job)
+    setIsEditJobOpen(true)
+  }
+
+  const handleUpdateJob = (updatedJob) => {
+    setJobPostings(prev => prev.map(job => 
+      job.id === updatedJob.id ? updatedJob : job
+    ))
+    setIsEditJobOpen(false)
+    setEditingJob(null)
+  }
+
+  const handleDeleteJob = (jobId) => {
+    if (window.confirm('Are you sure you want to delete this job posting?')) {
+      setJobPostings(prev => prev.filter(job => job.id !== jobId))
+    }
+  }
+
   // Column definitions for job postings table
   const jobPostingsColumns = [
     {
@@ -345,11 +375,21 @@ function CompanyDashboardPage() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={() => handleEditJob(row.original)}
+          >
             <Edit className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={() => handleDeleteJob(row.original.id)}
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <Users className="h-4 w-4" />
@@ -753,7 +793,6 @@ function CompanyDashboardPage() {
     </Card>
   )
 
-
   const renderResumeParser = () => (
     <div className="space-y-6">
       {/* Upload Section */}
@@ -1042,14 +1081,23 @@ function CompanyDashboardPage() {
 
   
         <div>
-          <label className="block text-sm font-medium mb-2">Salary Range</label>
-          <input
-            type="text"
-            name="salary_range"
-            placeholder="e.g. ₱30,000 - ₱50,000"
-            className="w-full border rounded p-2"
-          />
-        </div>
+  <label className="block text-sm font-medium mb-2">Salary Range</label>
+  <div className="flex gap-2">
+    <input
+      type="number"
+      name="salaryMin"
+      placeholder="₱30,000"
+      className="w-full border rounded p-2"
+    />
+    <span className="self-center">-</span>
+    <input
+      type="number"
+      name="salaryMax"
+      placeholder="₱50,000"
+      className="w-full border rounded p-2"
+    />
+  </div>
+</div>
 
   
         <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
@@ -1075,6 +1123,130 @@ function CompanyDashboardPage() {
     </Card>
   )
 
+  const renderEditJobForm = () => {
+    if (!editingJob) return null
+
+    return (
+      <Drawer open={isEditJobOpen} onOpenChange={setIsEditJobOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-2xl">
+            <DrawerHeader>
+              <DrawerTitle>Edit Job Posting</DrawerTitle>
+              <DrawerDescription>
+                Update the job posting details
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="p-6">
+              <form className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Job Title</label>
+                    <Input
+                      value={editingJob.title}
+                      onChange={(e) => setEditingJob({...editingJob, title: e.target.value})}
+                      placeholder="e.g. Software Engineer"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Location</label>
+                    <Input
+                      value={editingJob.location}
+                      onChange={(e) => setEditingJob({...editingJob, location: e.target.value})}
+                      placeholder="e.g. Manila, Remote"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Job Type</label>
+                    <Select 
+                      value={editingJob.type}
+                      onValueChange={(value) => setEditingJob({...editingJob, type: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select job type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Full Time">Full Time</SelectItem>
+                        <SelectItem value="Part Time">Part Time</SelectItem>
+                        <SelectItem value="Contract">Contract</SelectItem>
+                        <SelectItem value="Remote">Remote</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Status</label>
+                    <Select 
+                      value={editingJob.status}
+                      onValueChange={(value) => setEditingJob({...editingJob, status: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Salary Range</label>
+                  <Input
+                    value={editingJob.salary}
+                    onChange={(e) => setEditingJob({...editingJob, salary: e.target.value})}
+                    placeholder="e.g. ₱80,000 - ₱120,000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Description</label>
+                  <Textarea
+                    value={editingJob.description}
+                    onChange={(e) => setEditingJob({...editingJob, description: e.target.value})}
+                    placeholder="Describe the job responsibilities and requirements..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Requirements (comma separated)</label>
+                  <Input
+                    value={editingJob.requirements.join(', ')}
+                    onChange={(e) => setEditingJob({...editingJob, requirements: e.target.value.split(', ')})}
+                    placeholder="e.g. React, Node.js, 5+ years experience"
+                  />
+                </div>
+              </form>
+            </div>
+            <DrawerFooter>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => handleUpdateJob(editingJob)}
+                  className="flex-1 hover:bg-[#1c1c1c] transition-colors"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Update Job
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditJobOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    )
+  }
 
   return (
     <SidebarProvider>
@@ -1310,6 +1482,9 @@ function CompanyDashboardPage() {
             </div>
           </DrawerContent>
         </Drawer>
+
+        {/* Edit Job Drawer */}
+        {renderEditJobForm()}
       </div>
     </SidebarProvider>
   )

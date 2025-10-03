@@ -226,6 +226,7 @@ app.post("/submit-login", async(req, res) => {
     }
 
     await bcrypt.compare(password, user.password, async(err, result) => {
+      console.log(result)
       if (result){
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" })
         res.status(200).json({success: true, message: "success", token, role})
