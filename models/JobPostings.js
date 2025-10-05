@@ -7,8 +7,10 @@ JobPostings.init({
     description: DataTypes.STRING,
     type: DataTypes.STRING,
     companyID: DataTypes.INTEGER,
-    salary: DataTypes.INTEGER,
-    position: DataTypes.STRING
+    location: DataTypes.STRING,
+    salaryMin: DataTypes.INTEGER,
+    salaryMax: DataTypes.INTEGER,
+    status: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'JobPostings',

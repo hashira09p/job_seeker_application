@@ -104,9 +104,8 @@ function CompanyDashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [parsedData, setParsedData] = useState(null)
-  const [company, setCompany] = useState(null)
-  const [user, setUser] = useState(null)
-  const [createJobPosting, setCreateJobPosting] = useState({
+  const [user, setUser] = useState({})
+  const [jobPosting, setJobPosting] = useState({
     title: "",
     description: "",
     location: "",
@@ -114,6 +113,49 @@ function CompanyDashboardPage() {
     salaryMin: "",
     salaryMax: ""
   })
+
+  const handleChange = (e) => {
+    setJobPosting({
+      ...jobPosting,
+      [e.target.name]:e.target.value
+    })
+  }
+
+  const handleSubmit = async(e) => {
+    e.preventDefault()
+    try{
+      const result = await axios.post(`${URL}/jobPostingSubmit`, {
+        companyID: user.companyID,
+        title: jobPosting.title,
+        description: jobPosting.description,
+        location: jobPosting.location,
+        jobType: jobPosting.jobType,
+        salaryMin: jobPosting.salaryMin,
+        salaryMax: jobPosting.salaryMax
+      })
+    }catch(err){
+      console.log(err.message)
+    }
+  }
+
+  useEffect(() => {
+    async function fetchData(){
+      const token = localStorage.getItem("token");
+      console.log(token)
+      if (!token) {
+        navigate("/login"); 
+      } else {
+        const result = await axios.get(`${URL}/companyDashboard`,
+        {headers:{ Authorization: `Bearer ${token}` }})
+        
+        console.log(user)
+        setUser(result.data)
+      }
+    }
+
+    fetchData();
+  }, []);
+
 
   // Job postings state
   const [jobPostings, setJobPostings] = useState([
@@ -158,25 +200,7 @@ function CompanyDashboardPage() {
     }
   ])
 
-  useEffect(() => {
-    async function fetchData(){
-      const token = localStorage.getItem("token");
-      console.log(token)
-      if (!token) {
-        navigate("/login"); 
-      } else {
-        const result = await axios.get(`${URL}/company-dashboard`,
-        {headers:{ Authorization: `Bearer ${token}` }})
-        
-        setCompany(result.data.company)
-        setUser(result.data.fullName)
-        console.log(user,"hello")
-      }
-    }
-
-    fetchData();
-  }, []);
-
+  
   const sidebarItems = [
     {
       title: "Dashboard",
@@ -1033,7 +1057,7 @@ function CompanyDashboardPage() {
 
   const renderCreateJobPosting = () => {
     return (
-      <form className="space-y-6 p-4 max-w-lg mx-auto">
+      <form className="space-y-6 p-4 max-w-lg mx-auto" onSubmit={handleSubmit}>
         <div>
           <label className="block text-sm font-medium mb-2">Job Title</label>
           <input
@@ -1041,10 +1065,11 @@ function CompanyDashboardPage() {
             name="title"
             placeholder="e.g. Software Engineer"
             required
+            onChange={handleChange}
+            value={jobPosting.title}
             className="w-full border rounded p-2"
           />
         </div>
-
  
         <div>
           <label className="block text-sm font-medium mb-2">Description</label>
@@ -1052,6 +1077,8 @@ function CompanyDashboardPage() {
             name="description"
             placeholder="Write job description here..."
             required
+            onChange={handleChange}
+            value={jobPosting.description}
             className="w-full border rounded p-2"
           />
         </div>
@@ -1062,15 +1089,16 @@ function CompanyDashboardPage() {
           <input
             type="text"
             name="location"
+            onChange={handleChange}
+            value={jobPosting.location}
             placeholder="e.g. Manila, Remote"
             className="w-full border rounded p-2"
           />
         </div>
-
   
         <div>
           <label className="block text-sm font-medium mb-2">Job Type</label>
-          <select name="job_type" className="w-full border rounded p-2" required>
+          <select name="jobType" className="w-full border rounded p-2" required onChange={handleChange} value={jobPosting.jobType}>
             <option value="">Select job type</option>
             <option value="Full-time">Full-time</option>
             <option value="Part-time">Part-time</option>
@@ -1078,27 +1106,29 @@ function CompanyDashboardPage() {
             <option value="Contract">Contract</option>
           </select>
         </div>
-
   
         <div>
-  <label className="block text-sm font-medium mb-2">Salary Range</label>
-  <div className="flex gap-2">
-    <input
-      type="number"
-      name="salaryMin"
-      placeholder="₱30,000"
-      className="w-full border rounded p-2"
-    />
-    <span className="self-center">-</span>
-    <input
-      type="number"
-      name="salaryMax"
-      placeholder="₱50,000"
-      className="w-full border rounded p-2"
-    />
-  </div>
-</div>
-
+          <label className="block text-sm font-medium mb-2">Salary Range</label>
+          <div className="flex gap-2">
+            <input
+            type="number"
+            name="salaryMin"
+            placeholder="₱30,000"
+            onChange={handleChange}
+            value={jobPosting.salaryMin}
+            className="w-full border rounded p-2"
+            />
+            <span className="self-center">-</span>
+            <input
+              type="number"
+              name="salaryMax"
+              placeholder="₱50,000"
+              onChange={handleChange}
+            value={jobPosting.salaryMax}
+              className="w-full border rounded p-2"
+            />
+          </div>
+        </div>
   
         <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
           Post Job
@@ -1259,7 +1289,7 @@ function CompanyDashboardPage() {
               </div>
               <div>
                 <h2 className="font-semibold text-lg">Company Dashboard</h2>
-                <p className="text-xs text-muted-foreground">{company}</p>
+                <p className="text-xs text-muted-foreground">{user.company}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -1292,7 +1322,7 @@ function CompanyDashboardPage() {
                 <Building className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">{user}</p>
+                <p className="text-sm font-medium">{user.fullName}</p>
                 <p className="text-xs text-muted-foreground">HR Manager</p>
               </div>
             </div>

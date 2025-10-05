@@ -16,7 +16,7 @@ import { Trophy } from 'lucide-react';
 
 dotenv.config()
 
-const {Users, Companies} = db
+const {Users, Companies, JobPostings} = db
 const port = 3000;
 const app = express();
 const saltRounds = 15;
@@ -79,67 +79,6 @@ app.get("/auth/google/app",
   })
 )
 
-
-passport.use("google", new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL
-},
-async(request, accessToken, refreshToken, profile, done) => {
-  try{
-
-    console.log(profile)
-
-    const result = await Users.findOne({
-      where:{
-        email: profile.email
-      }
-    })
-
-    if(result){
-      return done(null, profile)
-    }
-
-    await Users.create({
-      fullName: `${profile.name.givenName} ${profile.name.familyName}`,
-      email: profile.email,
-      password: "google"
-    })
-
-    return done(null, profile)
-
-  }catch(err){
-    console.log(err.message)
-  }
-}
-))
-
-//Serialize and Deserialize
-passport.serializeUser(async(profile, done) => {
-
-  const user = await Users.findOne({
-    where: {
-      email: profile.email
-    }
-  })
-  console.log(user.id)
-  return done(null, user.id)
-})
-
-passport.deserializeUser(async(id, done) => {
-  try{
-    
-    const user = await Users.findByPk(id)
-    if(!user){
-      return done(null, false)
-    }
-
-    done(null,user)
-
-  }catch(err){
-    console.log(err.message)
-  }
-})
 
 // Register
 app.post("/submit-register", async (req, res) => {
@@ -208,7 +147,7 @@ app.post("/submit-register", async (req, res) => {
 //Login
 app.post("/submit-login", async(req, res) => {
   const {email, password} = req.body
-
+  // console.log(email, password)
   try{
     const user= await Users.findOne({
       where:{
@@ -228,7 +167,7 @@ app.post("/submit-login", async(req, res) => {
     await bcrypt.compare(password, user.password, async(err, result) => {
       console.log(result)
       if (result){
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" })
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "5h" })
         res.status(200).json({success: true, message: "success", token, role})
       }else{
         res.status(400).json({success: false, message: "wrong password"})
@@ -239,8 +178,9 @@ app.post("/submit-login", async(req, res) => {
   }
 })
 
+//Company
 //Company Page for Employer
-app.get("/company-dashboard", authenticateToken, async(req, res) => {
+app.get("/companyDashboard", authenticateToken, async(req, res) => {
   const result = await Companies.findOne({ 
     where:{
       userID: req.user.id,
@@ -251,13 +191,12 @@ app.get("/company-dashboard", authenticateToken, async(req, res) => {
     }
   })
   
-  console.log((result.user.firstName))
+  console.log("Company ID",result.id)
 
-
-  res.json({ message: "Welcome to dashboard!", user: req.user, company: result["name"], fullName: result.user.fullName})
+  res.json({ message: "Welcome to dashboard!", user: req.user, company: result["name"], fullName: result.user.fullName, companyID: result.id})
 });
 
-app.get("/companies", async(req, res) => {
+app.get("/companiesDashboard", async(req, res) => {
   try{
     const result = await Companies.findAll()
     res.status(200).json({success:true, result})
@@ -265,6 +204,90 @@ app.get("/companies", async(req, res) => {
     console.log(err.message)
   }
 })
+
+app.post("/jobPostingSubmit", (req,res) => {
+  const {title, description, location, jobType, salaryMin, salaryMax, companyID} = req.body
+
+  console.log(title, description, location, jobType, salaryMin, salaryMax, companyID)
+  
+  try{
+    const result = JobPostings.create({
+      title: title,
+      description: description,
+      location: location,
+      type: jobType,
+      companyID: companyID,
+      salaryMin: salaryMin,
+      salaryMax: salaryMax,
+      status: "active"
+    })
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+passport.use("google", new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL
+},
+
+async(request, accessToken, refreshToken, profile, done) => {
+  try{
+
+    console.log(profile)
+
+    const result = await Users.findOne({
+      where:{
+        email: profile.email
+      }
+    })
+
+    if(result){
+      return done(null, profile)
+    }
+
+    await Users.create({
+      fullName: `${profile.name.givenName} ${profile.name.familyName}`,
+      email: profile.email,
+      password: "google"
+    })
+
+    return done(null, profile)
+
+  }catch(err){
+    console.log(err.message)
+  }
+}
+))
+
+//Serialize and Deserialize
+passport.serializeUser(async(profile, done) => {
+
+  const user = await Users.findOne({
+    where: {
+      email: profile.email
+    }
+  })
+  console.log(user.id)
+  return done(null, user.id)
+})
+
+passport.deserializeUser(async(id, done) => {
+  try{
+    
+    const user = await Users.findByPk(id)
+    if(!user){
+      return done(null, false)
+    }
+
+    done(null,user)
+
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
 
 
 app.listen(port, () => {
