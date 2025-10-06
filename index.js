@@ -8,14 +8,15 @@ import GoogleStrategy from 'passport-google-oauth2'
 import dotenv from "dotenv"
 import { env } from 'process';
 import session from 'express-session';
-import Users from './models/Users.js';
-import Companies from './models/Companies.js';
+import db from './models/index.js';
 import { profile } from 'console';
 import jwt from "jsonwebtoken"
 import { Trophy } from 'lucide-react';
 
+
 dotenv.config()
 
+const {Users, Companies, JobPostings} = db
 const port = 3000;
 const app = express();
 const saltRounds = 15;
@@ -51,6 +52,7 @@ async function authenticate(){
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
+  console.log(token)
   if (!token) return res.sendStatus(401);
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -77,67 +79,6 @@ app.get("/auth/google/app",
   })
 )
 
-
-passport.use("google", new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL
-},
-async(request, accessToken, refreshToken, profile, done) => {
-  try{
-
-    console.log(profile)
-
-    const result = await Users.findOne({
-      where:{
-        email: profile.email
-      }
-    })
-
-    if(result){
-      return done(null, profile)
-    }
-
-    await Users.create({
-      fullName: `${profile.name.givenName} ${profile.name.familyName}`,
-      email: profile.email,
-      password: "google"
-    })
-
-    return done(null, profile)
-
-  }catch(err){
-    console.log(err.message)
-  }
-}
-))
-
-//Serialize and Deserialize
-passport.serializeUser(async(profile, done) => {
-
-  const user = await Users.findOne({
-    where: {
-      email: profile.email
-    }
-  })
-  console.log(user.id)
-  return done(null, user.id)
-})
-
-passport.deserializeUser(async(id, done) => {
-  try{
-    
-    const user = await Users.findByPk(id)
-    if(!user){
-      return done(null, false)
-    }
-
-    done(null,user)
-
-  }catch(err){
-    console.log(err.message)
-  }
-})
 
 // Register
 app.post("/submit-register", async (req, res) => {
@@ -206,7 +147,7 @@ app.post("/submit-register", async (req, res) => {
 //Login
 app.post("/submit-login", async(req, res) => {
   const {email, password} = req.body
-
+  // console.log(email, password)
   try{
     const user= await Users.findOne({
       where:{
@@ -224,11 +165,10 @@ app.post("/submit-login", async(req, res) => {
     }
 
     await bcrypt.compare(password, user.password, async(err, result) => {
+      //this console.log will say false if it is wrong password
       console.log(result)
       if (result){
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" })
-
-        console.log(`eto ang ${token}`);
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "5h" })
         res.status(200).json({success: true, message: "success", token, role})
       }else{
         res.status(400).json({success: false, message: "wrong password"})
@@ -239,20 +179,167 @@ app.post("/submit-login", async(req, res) => {
   }
 })
 
-//Company Page for Emplo
-app.get("/company-dashboard", authenticateToken, (req, res) => {
-  console.log(req.headers)
-  res.json({ message: "Welcome to dashboard!", user: req.user });
+//Employer
+//Company Page for Employer
+app.get("/companyDashboard", authenticateToken, async(req, res) => {
+  const companies = await Companies.findOne({ 
+    where:{
+      userID: req.user.id,
+    },
+    include: {
+      model: Users,
+      as: "user"
+    }
+  })
+
+  const jobPostings = await JobPostings.findAll({
+    where:{
+      companyID: companies.id
+    }
+  })
+
+  res.json({ message: "Welcome to dashboard!", user: req.user, company: companies["name"], fullName: companies.user.fullName, companyID: companies.id, jobPostings})
 });
 
-app.get("/companies", async(req,res) => {
+app.post("/jobPostingSubmit", async(req,res) => {
+  const {title, description, location, jobType, salaryMin, salaryMax, companyID} = req.body
+
+  console.log(title, description, location, jobType, salaryMin, salaryMax, companyID)
+  
+  try{
+    const result = await JobPostings.create({
+      title: title,
+      description: description,
+      location: location,
+      type: jobType,
+      companyID: companyID,
+      salaryMin: salaryMin,
+      salaryMax: salaryMax,
+      status: "active"
+    })
+
+    console.log(result)
+    res.status(200).json({message:"OK", job:result})
+  }catch(err){
+    console.log(err.message)
+  }
+});
+
+app.patch("/jobPostings/:id", authenticateToken, async(req,res) => {
+  const {title, location, description, type, status, salaryMin, salaryMax} = req.body;
+  
+  const jobPostingID = req.params.id
+
+  try{
+    const result = await JobPostings.update({
+      title: title,
+      location: location,
+      description: description,
+      type: type,
+      status: status,
+      salaryMin: salaryMin,
+      salaryMax:salaryMax,},
+      
+      {
+        where:{
+        id: jobPostingID
+      }
+      })
+
+    res.status(200).json({message:"OK"})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+app.delete("/jobPostings/:id", authenticateToken, async(req,res) => {
+  const jobPostingID = req.params.id
+  try{
+    const result = await JobPostings.destroy({
+      where:{
+        id: jobPostingID
+      }
+    })
+
+    res.status(200).json({message:"OK"})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+//User
+//Company Page for User
+app.get("/companies", async(req, res) => {
   try{
     const result = await Companies.findAll()
     res.status(200).json({success:true, result})
   }catch(err){
-    console.log(result)
+    console.log(err.message)
   }
 })
+
+passport.use("google", new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL
+},
+
+async(request, accessToken, refreshToken, profile, done) => {
+  try{
+
+    console.log(profile)
+
+    const result = await Users.findOne({
+      where:{
+        email: profile.email
+      }
+    })
+
+    if(result){
+      return done(null, profile)
+    }
+
+    await Users.create({
+      fullName: `${profile.name.givenName} ${profile.name.familyName}`,
+      email: profile.email,
+      password: "google"
+    })
+
+    return done(null, profile)
+
+  }catch(err){
+    console.log(err.message)
+  }
+}
+))
+
+//Serialize and Deserialize
+passport.serializeUser(async(profile, done) => {
+
+  const user = await Users.findOne({
+    where: {
+      email: profile.email
+    }
+  })
+  console.log(user.id)
+  return done(null, user.id)
+})
+
+passport.deserializeUser(async(id, done) => {
+  try{
+    
+    const user = await Users.findByPk(id)
+    if(!user){
+      return done(null, false)
+    }
+
+    done(null,user)
+
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
 
 
 app.listen(port, () => {

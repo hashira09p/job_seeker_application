@@ -1,121 +1,147 @@
-import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { DataTable } from "@/components/ui/data-table"
+import React, { useState, useEffect } from 'react';
 import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
+  Card, CardContent, CardDescription, CardHeader, CardTitle
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
+import {
+  Select, SelectTrigger, SelectContent, SelectItem, SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
+  Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter,
+  DrawerHeader, DrawerTitle, DrawerTrigger
+} from "@/components/ui/drawer";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
+  SidebarMenuItem, SidebarProvider, SidebarTrigger
+} from "@/components/ui/sidebar";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart"
-import { 
-  Users, 
-  UserPlus, 
-  Briefcase,
-  BriefcaseMedical, 
-  FileText, 
-  TrendingUp, 
-  Search,
-  Filter,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  Calendar,
-  Mail,
-  Phone,
-  MapPin,
-  Building,
-  DollarSign,
-  Clock,
-  BarChart3,
-  Settings,
-  Home,
-  Menu,
-  Download,
-  Star,
-  Target,
-  Award,
-  CheckCircle,
-  XCircle,
-  Clock3,
-  UserCheck,
-  UserX,
-  MessageSquare,
-  ExternalLink,
-  Upload,
-  Sparkles,
-  AlertCircle
-} from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import axios from "axios"
-import { useNavigate } from 'react-router-dom'
+  ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent
+} from "@/components/ui/chart";
+import {
+  Users, UserPlus, Briefcase, BriefcaseMedical, FileText, TrendingUp, Search,
+  Filter, MoreHorizontal, Eye, Edit, Trash2, Calendar, Mail, Phone, MapPin,
+  Building, DollarSign, Clock, BarChart3, Settings, Home, Menu, Download, Star,
+  Target, Award, CheckCircle, XCircle, Clock3, UserCheck, UserX, MessageSquare,
+  ExternalLink, Upload, Sparkles, AlertCircle
+} from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell
+} from 'recharts';
+import axios from "axios";
+import { useNavigate } from 'react-router-dom';
+
 
 function CompanyDashboardPage() {
-  const [activeView, setActiveView] = useState('dashboard')
-  const [selectedApplicant, setSelectedApplicant] = useState(null)
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [selectedJob, setSelectedJob] = useState(null)
-  const navigate = useNavigate()
-  
+  const [activeView, setActiveView] = useState('dashboard');
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isEditJobOpen, setIsEditJobOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
+  const navigate = useNavigate();
+  const URL = "http://localhost:3000";
+
   // Resume Parser states
-  const [uploadedFile, setUploadedFile] = useState(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [extractedSkills, setExtractedSkills] = useState([])
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysisComplete, setAnalysisComplete] = useState(false)
-  const [parsedData, setParsedData] = useState(null)
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [extractedSkills, setExtractedSkills] = useState([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [parsedData, setParsedData] = useState(null);
+  const [user, setUser] = useState({});
+  const [createJobPosting, setCreateJobPosting] = useState({
+    title: "",
+    description: "",
+    location: "",
+    jobType: "",
+    salaryMin: "",
+    salaryMax: ""
+  });
+
+  // Job postings state
+  const [jobPostings, setJobPostings] = useState([]);
+
+  const handleChange = (e) => {
+    setCreateJobPosting({
+      ...createJobPosting,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const result = await axios.post(`${URL}/jobPostingSubmit`, {
+        companyID: user.companyID,
+        title: createJobPosting.title,
+        description: createJobPosting.description,
+        location: createJobPosting.location,
+        jobType: createJobPosting.jobType,
+        salaryMin: createJobPosting.salaryMin,
+        salaryMax: createJobPosting.salaryMax
+      });
+      alert("Save success");
+
+      console.log(result.data)
+
+      // Update the jobPostings state with the new job
+    // If your backend returns the created job, use it:
+    if (result.data && result.data.job) {
+      setJobPostings(prev => [...prev, result.data.job]);
+    } else {
+      // If backend doesn't return the job, create a temporary one
+      const newJob = {
+        id: Date.now(), // Temporary ID until you refresh
+        title: createJobPosting.title,
+        location: createJobPosting.location,
+        type: createJobPosting.jobType,
+        status: 'active',
+        salaryMin: createJobPosting.salaryMin,
+        salaryMax: createJobPosting.salaryMax,
+        createdAt: new Date().toISOString().split('T')[0],
+        applicants: 0
+      };
+      setJobPostings(prev => [...prev, newJob]);
+    }
+      setCreateJobPosting({
+        title: "",
+        description: "",
+        location: "",
+        jobType: "",
+        salaryMin: "",
+        salaryMax: ""
+      });
+    } catch (err) {
+      alert("Error creating job posting. Please try again.");
+    }
+  };
 
   useEffect(() => {
-    async function fetchData(){
+    async function fetchData() {
       const token = localStorage.getItem("token");
-      console.log(token)
       if (!token) {
-        navigate("/login"); 
+        navigate("/login");
       } else {
-        await axios.get(`${URL}/company-dashboard`,
-        {headers:{ Authorization: `Bearer ${token}` }})
+        try {
+          const result = await axios.get(`${URL}/companyDashboard`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setUser(result.data);
+          setJobPostings(result.data.jobPostings || []);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          alert("Error loading dashboard data");
+        }
       }
     }
-
     fetchData();
-  }, []);
+  }, [navigate]);
 
   const sidebarItems = [
     {
@@ -139,57 +165,14 @@ function CompanyDashboardPage() {
       view: "resume-parser"
     },
     {
-      title: "Settings",
-      icon: Settings,
-      view: "settings"
-    },
-    {
       title: "Create Job Posting",
       icon: BriefcaseMedical,
       view: "create-job-posting"
-    }
-  ]
-
-  // Mock data for job postings
-  const jobPostings = [
-    { 
-      id: 1, 
-      title: 'Senior Software Engineer', 
-      company: 'UnasaTrabaho', 
-      applicants: 25, 
-      status: 'active', 
-      postedDate: '2025-01-15', 
-      salary: '₱80,000 - ₱120,000',
-      location: 'Makati City, Metro Manila',
-      type: 'Full Time',
-      description: 'We are looking for a Senior Software Engineer to join our dynamic team. You will be responsible for developing and maintaining high-quality software solutions.',
-      requirements: ['React', 'Node.js', 'TypeScript', 'AWS', '5+ years experience']
     },
-    { 
-      id: 2, 
-      title: 'Marketing Specialist', 
-      company: 'TechCorp Philippines', 
-      applicants: 18, 
-      status: 'active', 
-      postedDate: '2025-01-12', 
-      salary: '₱35,000 - ₱50,000',
-      location: 'Quezon City, Metro Manila',
-      type: 'Full Time',
-      description: 'Join our marketing team and help us grow our brand presence in the Philippine market.',
-      requirements: ['Digital Marketing', 'Social Media', 'Content Creation', 'Analytics', '2+ years experience']
-    },
-    { 
-      id: 3, 
-      title: 'Customer Service Representative', 
-      company: 'TechCorp Philippines', 
-      applicants: 32, 
-      status: 'closed', 
-      postedDate: '2025-01-08', 
-      salary: '₱25,000 - ₱35,000',
-      location: 'Taguig City, Metro Manila',
-      type: 'Full Time',
-      description: 'Provide excellent customer support and help resolve customer inquiries.',
-      requirements: ['Communication Skills', 'Problem Solving', 'Customer Service', 'English Proficiency']
+    {
+      title: "Settings",
+      icon: Settings,
+      view: "settings"
     }
   ]
 
@@ -297,60 +280,159 @@ function CompanyDashboardPage() {
     }
   }
 
+  // Add these functions after your existing handleSubmit function
+
+const handleEditJob = async (jobId, updatedData) => {
+  console.log(updatedData)
+  try {
+    const token = localStorage.getItem("token");
+    await axios.patch(`${URL}/jobPostings/${jobId}`, updatedData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    alert("Job updated successfully");
+    return true;
+  } catch (err) {
+    console.log("Error updating job:", err);
+    alert("Error updating job posting. Please try again.");
+    return false;
+  }
+};
+
+const handleDeleteJob = async (jobId) => {
+  if (window.confirm('Are you sure you want to delete this job posting?')) {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${URL}/jobPostings/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert("Job deleted successfully");
+      return true;
+    } catch (err) {
+      console.log("Error deleting job:", err);
+      alert("Error deleting job posting. Please try again.");
+      return false;
+    }
+  }
+  return false;
+};
+
   // Column definitions for job postings table
-  const jobPostingsColumns = [
-    {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ row }) => <div className="font-medium">{row.getValue("id")}</div>,
+  // Column definitions for job postings table
+const jobPostingsColumns = [
+  {
+    accessorKey: "id",
+    header: "ID",
+    cell: ({ row }) => <div className="font-medium">{row.getValue("id")}</div>,
+  },
+  {
+    accessorKey: "title",
+    header: "Title",
+  },
+  {
+    accessorKey: "location",
+    header: "Location",
+  },
+  {
+    accessorKey: "type", // Changed from "type" to match your state
+    header: "Type",
+  },
+  {
+    accessorKey: "applicants",
+    header: "Applicants",
+    cell: ({ row }) => {
+      const applicantsCount = applicants.filter(app => app.jobId === row.original.id).length;
+      return <div>{applicantsCount}</div>;
     },
-    {
-      accessorKey: "title",
-      header: "Title",
-    },
-    {
-      accessorKey: "location",
-      header: "Location",
-    },
-    {
-      accessorKey: "type",
-      header: "Type",
-    },
-    {
-      accessorKey: "applicants",
-      header: "Applicants",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => getStatusBadge(row.getValue("status")),
-    },
-    {
-      accessorKey: "postedDate",
-      header: "Posted Date",
-    },
-    {
-      accessorKey: "salary",
-      header: "Salary",
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => getStatusBadge(row.getValue("status")),
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Posted Date",
+  },
+  {
+    accessorKey: "salaryMin",
+    header: "Minimum Salary",
+    cell: ({ row }) => <div>₱{row.getValue("salaryMin")?.toLocaleString()}</div>,
+  },
+  {
+    accessorKey: "salaryMax",
+    header: "Maximum Salary",
+    cell: ({ row }) => <div>₱{row.getValue("salaryMax")?.toLocaleString()}</div>,
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => {
+      const job = row.original;
+      return (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={() => handleEditJobClick(job)}
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Users className="h-4 w-4" />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+            onClick={() => handleDeleteJobClick(job.id)}
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
+          {/* <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={() => handleViewApplicants(job.id)}
+          >
+            <Users className="h-4 w-4" />
+          </Button> */}
         </div>
-      ),
+      );
     },
-  ]
+  },
+];
+
+// Add these functions near your other handler functions
+
+const handleEditJobClick = (job) => {
+  setEditingJob(job);
+  setIsEditJobOpen(true);
+};
+
+const handleDeleteJobClick = async (jobId) => {
+  const success = await handleDeleteJob(jobId);
+  if (success) {
+    // Update local state
+    setJobPostings(prev => prev.filter(job => job.id !== jobId));
+  }
+};
+
+const handleViewApplicants = (jobId) => {
+  // Navigate to applicants view or filter applicants for this job
+  setActiveView('applicants');
+  // You can also set a filter to show only applicants for this job
+  console.log(`View applicants for job ${jobId}`);
+};
+
+// Update the existing handleUpdateJob function
+const handleUpdateJob = async (updatedJob) => {
+  const success = await handleEditJob(updatedJob.id, updatedJob);
+  if (success) {
+    setJobPostings(prev => prev.map(job => 
+      job.id === updatedJob.id ? updatedJob : job
+    ));
+    setIsEditJobOpen(false);
+    setEditingJob(null);
+  }
+};
 
   // Column definitions for applicants table
   const applicantsColumns = [
@@ -741,11 +823,12 @@ function CompanyDashboardPage() {
           searchKey="name"
           searchPlaceholder="Search applicants..."
           onRowClick={(applicant) => handleApplicantClick(applicant)}
+          pagination={true}
+          pageSize={10}
         />
       </CardContent>
     </Card>
   )
-
 
   const renderResumeParser = () => (
     <div className="space-y-6">
@@ -987,7 +1070,7 @@ function CompanyDashboardPage() {
 
   const renderCreateJobPosting = () => {
     return (
-      <form className="space-y-6 p-4 max-w-lg mx-auto">
+      <form className="space-y-6 p-4 max-w-lg mx-auto" onSubmit={handleSubmit}>
         <div>
           <label className="block text-sm font-medium mb-2">Job Title</label>
           <input
@@ -995,10 +1078,11 @@ function CompanyDashboardPage() {
             name="title"
             placeholder="e.g. Software Engineer"
             required
+            onChange={handleChange}
+            value={createJobPosting.title}
             className="w-full border rounded p-2"
           />
         </div>
-
  
         <div>
           <label className="block text-sm font-medium mb-2">Description</label>
@@ -1006,6 +1090,8 @@ function CompanyDashboardPage() {
             name="description"
             placeholder="Write job description here..."
             required
+            onChange={handleChange}
+            value={createJobPosting.description}
             className="w-full border rounded p-2"
           />
         </div>
@@ -1016,15 +1102,16 @@ function CompanyDashboardPage() {
           <input
             type="text"
             name="location"
+            onChange={handleChange}
+            value={createJobPosting.location}
             placeholder="e.g. Manila, Remote"
             className="w-full border rounded p-2"
           />
         </div>
-
   
         <div>
           <label className="block text-sm font-medium mb-2">Job Type</label>
-          <select name="job_type" className="w-full border rounded p-2" required>
+          <select name="jobType" className="w-full border rounded p-2" required onChange={handleChange} value={createJobPosting.jobType}>
             <option value="">Select job type</option>
             <option value="Full-time">Full-time</option>
             <option value="Part-time">Part-time</option>
@@ -1032,19 +1119,64 @@ function CompanyDashboardPage() {
             <option value="Contract">Contract</option>
           </select>
         </div>
-
   
         <div>
-          <label className="block text-sm font-medium mb-2">Salary Range</label>
-          <input
-            type="text"
-            name="salary_range"
-            placeholder="e.g. ₱30,000 - ₱50,000"
-            className="w-full border rounded p-2"
-          />
-        </div>
-
+  <label className="block text-sm font-medium mb-2">Salary Range</label>
+  <div className="flex gap-2">
+    <div className="w-full">
+      <input
+        type="number"
+        name="salaryMin"
+        placeholder="₱30,000"
+        onChange={handleChange}
+        value={createJobPosting.salaryMin}
+        className={`w-full border rounded p-2 ${
+          createJobPosting.salaryMin && createJobPosting.salaryMax && 
+          parseInt(createJobPosting.salaryMin) > parseInt(createJobPosting.salaryMax) 
+            ? 'border-red-500 bg-red-50' 
+            : 'border-gray-300'
+        }`}
+        min="0"
+      />
+    </div>
+    <span className="self-center">-</span>
+    <div className="w-full">
+      <input
+        type="number"
+        name="salaryMax"
+        placeholder="₱50,000"
+        onChange={handleChange}
+        value={createJobPosting.salaryMax}
+        className={`w-full border rounded p-2 ${
+          createJobPosting.salaryMin && createJobPosting.salaryMax && 
+          parseInt(createJobPosting.salaryMin) > parseInt(createJobPosting.salaryMax) 
+            ? 'border-red-500 bg-red-50' 
+            : 'border-gray-300'
+        }`}
+        min="0"
+      />
+    </div>
+  </div>
   
+  {/* Validation Error Message */}
+  {createJobPosting.salaryMin && createJobPosting.salaryMax && 
+   parseInt(createJobPosting.salaryMin) > parseInt(createJobPosting.salaryMax) && (
+    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+      <AlertCircle className="h-4 w-4" />
+      Minimum salary cannot be higher than maximum salary
+    </p>
+  )}
+  
+  {/* Success Message when valid */}
+  {createJobPosting.salaryMin && createJobPosting.salaryMax && 
+   parseInt(createJobPosting.salaryMin) <= parseInt(createJobPosting.salaryMax) && (
+    <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
+      <CheckCircle className="h-4 w-4" />
+      Valid salary range
+    </p>
+  )}
+</div>
+
         <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
           Post Job
         </button>
@@ -1068,6 +1200,149 @@ function CompanyDashboardPage() {
     </Card>
   )
 
+  const renderEditJobForm = () => {
+  if (!editingJob) return null;
+
+  return (
+    <Drawer open={isEditJobOpen} onOpenChange={setIsEditJobOpen}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-2xl">
+          <DrawerHeader>
+            <DrawerTitle>Edit Job Posting</DrawerTitle>
+            <DrawerDescription>
+              Update the job posting details
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="p-6">
+            <form className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Title</label>
+                  <Input
+                    value={editingJob.title || ''}
+                    onChange={(e) => setEditingJob({...editingJob, title: e.target.value})}
+                    placeholder="e.g. Software Engineer"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Location</label>
+                  <Input
+                    value={editingJob.location || ''}
+                    onChange={(e) => setEditingJob({...editingJob, location: e.target.value})}
+                    placeholder="e.g. Manila, Remote"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Type</label>
+                  <Select 
+                    value={editingJob.type || ''}
+                    onValueChange={(value) => setEditingJob({...editingJob, type: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select job type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full-time">Full-time</SelectItem>
+                      <SelectItem value="Part-time">Part-time</SelectItem>
+                      <SelectItem value="Remote">Remote</SelectItem>
+                      <SelectItem value="Contract">Contract</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Status</label>
+                  <Select 
+                    value={editingJob.status || 'active'}
+                    onValueChange={(value) => setEditingJob({...editingJob, status: value})}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Minimum Salary</label>
+                  <Input
+                    type="number"
+                    value={editingJob.salaryMin || ''}
+                    onChange={(e) => setEditingJob({...editingJob, salaryMin: e.target.value})}
+                    placeholder="₱30,000"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Maximum Salary</label>
+                  <Input
+                    type="number"
+                    value={editingJob.salaryMax || ''}
+                    onChange={(e) => setEditingJob({...editingJob, salaryMax: e.target.value})}
+                    placeholder="₱50,000"
+                  />
+                </div>
+              </div>
+
+              {/* Salary Validation */}
+              {editingJob.salaryMin && editingJob.salaryMax && 
+               parseInt(editingJob.salaryMin) > parseInt(editingJob.salaryMax) && (
+                <p className="text-red-500 text-sm flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  Minimum salary cannot be higher than maximum salary
+                </p>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Job Description</label>
+                <Textarea
+                  value={editingJob.description || ''}
+                  onChange={(e) => setEditingJob({...editingJob, description: e.target.value})}
+                  placeholder="Describe the job responsibilities and requirements..."
+                  rows={6}
+                />
+              </div>
+            </form>
+          </div>
+          <DrawerFooter>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => handleUpdateJob(editingJob)}
+                disabled={editingJob.salaryMin && editingJob.salaryMax && 
+                         parseInt(editingJob.salaryMin) > parseInt(editingJob.salaryMax)}
+                className="flex-1 hover:bg-[#1c1c1c] transition-colors"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Update Job
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditJobOpen(false);
+                  setEditingJob(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+};
 
   return (
     <SidebarProvider>
@@ -1080,7 +1355,7 @@ function CompanyDashboardPage() {
               </div>
               <div>
                 <h2 className="font-semibold text-lg">Company Dashboard</h2>
-                <p className="text-xs text-muted-foreground">Una sa Trabaho Philippines</p>
+                <p className="text-xs text-muted-foreground">{user.company}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -1113,7 +1388,7 @@ function CompanyDashboardPage() {
                 <Building className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">TechCorp Philippines</p>
+                <p className="text-sm font-medium">{user.fullName}</p>
                 <p className="text-xs text-muted-foreground">HR Manager</p>
               </div>
             </div>
@@ -1303,9 +1578,12 @@ function CompanyDashboardPage() {
             </div>
           </DrawerContent>
         </Drawer>
+
+        {/* Edit Job Drawer */}
+        {renderEditJobForm()}
       </div>
     </SidebarProvider>
-  )
+  );
 }
 
-export default CompanyDashboardPage
+export default CompanyDashboardPage;

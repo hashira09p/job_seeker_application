@@ -17,7 +17,8 @@ Companies.init({
 });
 
 Companies.associate = (models) => {
-    Companies.belongsTo(models.Users,{foreignKey: "userID", as: "users"})
+    Companies.belongsTo(models.Users,{foreignKey: "userID", as: "user"})
+    Companies.hasMany(models.JobPostings,{foreignKey:"companyID", as:"jobPosting"})
 }
 
 export default Companies;
