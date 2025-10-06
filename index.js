@@ -157,7 +157,7 @@ app.post("/submit-login", async(req, res) => {
     
     const role = user.role
 
-    // console.log(user)
+    console.log(user)
     
     if (user == null) { 
       console.log("User not registered.")
@@ -165,6 +165,7 @@ app.post("/submit-login", async(req, res) => {
     }
 
     await bcrypt.compare(password, user.password, async(err, result) => {
+      //this console.log will say false if it is wrong password
       console.log(result)
       if (result){
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "5h" })
@@ -178,10 +179,10 @@ app.post("/submit-login", async(req, res) => {
   }
 })
 
-//Company
+//Employer
 //Company Page for Employer
 app.get("/companyDashboard", authenticateToken, async(req, res) => {
-  const result = await Companies.findOne({ 
+  const companies = await Companies.findOne({ 
     where:{
       userID: req.user.id,
     },
@@ -190,28 +191,23 @@ app.get("/companyDashboard", authenticateToken, async(req, res) => {
       as: "user"
     }
   })
-  
-  console.log("Company ID",result.id)
 
-  res.json({ message: "Welcome to dashboard!", user: req.user, company: result["name"], fullName: result.user.fullName, companyID: result.id})
+  const jobPostings = await JobPostings.findAll({
+    where:{
+      companyID: companies.id
+    }
+  })
+
+  res.json({ message: "Welcome to dashboard!", user: req.user, company: companies["name"], fullName: companies.user.fullName, companyID: companies.id, jobPostings})
 });
 
-app.get("/companiesDashboard", async(req, res) => {
-  try{
-    const result = await Companies.findAll()
-    res.status(200).json({success:true, result})
-  }catch(err){
-    console.log(err.message)
-  }
-})
-
-app.post("/jobPostingSubmit", (req,res) => {
+app.post("/jobPostingSubmit", async(req,res) => {
   const {title, description, location, jobType, salaryMin, salaryMax, companyID} = req.body
 
   console.log(title, description, location, jobType, salaryMin, salaryMax, companyID)
   
   try{
-    const result = JobPostings.create({
+    const result = await JobPostings.create({
       title: title,
       description: description,
       location: location,
@@ -221,6 +217,62 @@ app.post("/jobPostingSubmit", (req,res) => {
       salaryMax: salaryMax,
       status: "active"
     })
+
+    console.log(result)
+    res.status(200).json({message:"OK", job:result})
+  }catch(err){
+    console.log(err.message)
+  }
+});
+
+app.patch("/jobPostings/:id", authenticateToken, async(req,res) => {
+  const {title, location, description, type, status, salaryMin, salaryMax} = req.body;
+  
+  const jobPostingID = req.params.id
+
+  try{
+    const result = await JobPostings.update({
+      title: title,
+      location: location,
+      description: description,
+      type: type,
+      status: status,
+      salaryMin: salaryMin,
+      salaryMax:salaryMax,},
+      
+      {
+        where:{
+        id: jobPostingID
+      }
+      })
+
+    res.status(200).json({message:"OK"})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+app.delete("/jobPostings/:id", authenticateToken, async(req,res) => {
+  const jobPostingID = req.params.id
+  try{
+    const result = await JobPostings.destroy({
+      where:{
+        id: jobPostingID
+      }
+    })
+
+    res.status(200).json({message:"OK"})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+//User
+//Company Page for User
+app.get("/companies", async(req, res) => {
+  try{
+    const result = await Companies.findAll()
+    res.status(200).json({success:true, result})
   }catch(err){
     console.log(err.message)
   }

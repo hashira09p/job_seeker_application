@@ -31,10 +31,29 @@ function CompaniesPage() {
         const companies = freshData.data.result
         setDataFromDB(companies)
 
-        // build unique industry options dynamically
-        const uniqueIndustries = [
-          ...new Set(companies.map((c) => c.industry).filter(Boolean))
-        ].map((ind) => ({ value: ind, label: ind }))
+        // Debug: log all work arrangements from database
+        console.log("All work arrangements from DB:", companies.map(c => c.arrangement))
+        console.log("Unique work arrangements:", [...new Set(companies.map(c => c.arrangement).filter(Boolean))])
+
+        // Build unique industry options with normalization
+        const uniqueIndustries = [...new Set(
+          companies
+            .map((c) => c.industry)
+            .filter(Boolean)
+            .map(industry => 
+              industry
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, ' ') // Normalize spaces
+            )
+            .filter(industry => industry.length > 0)
+        )].sort()
+          .map((ind) => ({ 
+            value: ind, 
+            label: ind.split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ')
+          }))
 
         setIndustryOptions(uniqueIndustries)
       } catch (err) {
@@ -48,8 +67,11 @@ function CompaniesPage() {
   const filteredCompanies = dataFromDB
     .filter(
       (c) =>
-        (!industry || (c.industry && c.industry === industry)) &&
-        (!workArrangement || (c.arrangement && c.arrangement === workArrangement)) &&
+        (!industry || (c.industry && c.industry.trim().toLowerCase() === industry)) &&
+        (!workArrangement || 
+          (c.arrangement && 
+           c.arrangement.trim().toLowerCase() === workArrangement.trim().toLowerCase())
+        ) &&
         (!search ||
           c.name.toLowerCase().includes(search.toLowerCase()) ||
           (c.industry && c.industry.toLowerCase().includes(search.toLowerCase())))
