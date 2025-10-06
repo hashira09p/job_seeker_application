@@ -31,11 +31,24 @@ function CompaniesPage() {
         const companies = freshData.data.result
         setDataFromDB(companies)
 
-        // Debug: log all work arrangements from database
-        console.log("All work arrangements from DB:", companies.map(c => c.arrangement))
-        console.log("Unique work arrangements:", [...new Set(companies.map(c => c.arrangement).filter(Boolean))])
+        console.log("=== DEBUGGING COMPANY DATA ===")
+        console.log("Total companies:", companies.length)
+        
+        // Log all companies with their arrangements
+        companies.forEach((c, index) => {
+          console.log(`Company ${index + 1}:`, {
+            name: c.name,
+            arrangement: c.arrangement,
+            industry: c.industry
+          })
+        })
 
-        // Build unique industry options with normalization
+        // Log unique arrangements
+        const arrangements = companies.map(c => c.arrangement).filter(Boolean)
+        console.log("All arrangements:", arrangements)
+        console.log("Unique arrangements:", [...new Set(arrangements)])
+
+        // Build unique industry options
         const uniqueIndustries = [...new Set(
           companies
             .map((c) => c.industry)
@@ -44,7 +57,7 @@ function CompaniesPage() {
               industry
                 .trim()
                 .toLowerCase()
-                .replace(/\s+/g, ' ') // Normalize spaces
+                .replace(/\s+/g, ' ')
             )
             .filter(industry => industry.length > 0)
         )].sort()
@@ -64,18 +77,31 @@ function CompaniesPage() {
   }, [])
 
   // --- Filtering logic ---
+  console.log("=== FILTERING DEBUG ===")
+  console.log("Current filter values:", {
+    industry,
+    workArrangement, 
+    search
+  })
+
   const filteredCompanies = dataFromDB
-    .filter(
-      (c) =>
-        (!industry || (c.industry && c.industry.trim().toLowerCase() === industry)) &&
-        (!workArrangement || 
-          (c.arrangement && 
-           c.arrangement.trim().toLowerCase() === workArrangement.trim().toLowerCase())
-        ) &&
-        (!search ||
-          c.name.toLowerCase().includes(search.toLowerCase()) ||
-          (c.industry && c.industry.toLowerCase().includes(search.toLowerCase())))
-    )
+    .filter((c) => {
+      const industryMatch = !industry || (c.industry && c.industry.trim().toLowerCase() === industry)
+      const arrangementMatch = !workArrangement || (c.arrangement && c.arrangement.trim().toLowerCase() === workArrangement.trim().toLowerCase())
+      const searchMatch = !search ||
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.industry && c.industry.toLowerCase().includes(search.toLowerCase()))
+      
+      console.log(`Company: ${c.name}`, {
+        industryMatch,
+        arrangementMatch, 
+        searchMatch,
+        companyArrangement: c.arrangement,
+        filterArrangement: workArrangement
+      })
+      
+      return industryMatch && arrangementMatch && searchMatch
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
@@ -87,12 +113,14 @@ function CompaniesPage() {
       }
     })
 
+  console.log("Filtered companies count:", filteredCompanies.length)
+
   // --- Options ---
   const workArrangementOptions = [
-    { value: "onsite", label: "On-site" },
-    { value: "hybrid", label: "Hybrid" },
-    { value: "remote", label: "Remote" },
-    { value: "flexible", label: "Flexible" }
+    { value: "On-site", label: "On-site" },
+    { value: "Hybrid", label: "Hybrid" },
+    { value: "Remote", label: "Remote" },
+    { value: "Flexible", label: "Flexible" }
   ]
 
   const sortOptions = [
