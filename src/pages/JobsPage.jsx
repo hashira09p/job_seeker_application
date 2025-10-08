@@ -1,259 +1,370 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Combobox } from "@/components/ui/combobox"
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
-import * as React from "react"
-import { Link } from 'react-router-dom'
-import { Search, MapPin, Briefcase, Filter, Star, Building2, Clock, DollarSign, ArrowRight, Mail, Phone, Users, Calendar, FileText, Award, Heart, Share2, GripHorizontal, Maximize2, Minimize2, ChevronUp } from 'lucide-react'
-import Navigation from '@/components/Navigation'
-import Footer from '@/components/Footer'
-import Breadcrumb from '@/components/Breadcrumb'
-import ApiService from '@/services/api'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from 'react-router-dom';
+import {
+  Search, MapPin, Briefcase, Filter, Star, Building2, Clock, DollarSign, ArrowRight, Mail, Phone, Users, Calendar, FileText, Award, Heart, Share2, GripHorizontal, Maximize2, Minimize2, ChevronUp, ChevronLeft, ChevronRight
+} from 'lucide-react';
+import Navigation from '@/components/Navigation';
+import Footer from '@/components/Footer';
+import Breadcrumb from '@/components/Breadcrumb';
+import axios from 'axios';
 
 function JobsPage() {
-  const [jobType, setJobType] = React.useState("")
-  const [experienceLevel, setExperienceLevel] = React.useState("")
-  const [salaryRange, setSalaryRange] = React.useState("")
-  const [industry, setIndustry] = React.useState("")
-  const [sortBy, setSortBy] = React.useState("latest")
-  const [allJobs, setAllJobs] = React.useState([])
-  const [filteredJobs, setFilteredJobs] = React.useState([])
-  const [loading, setLoading] = React.useState(true)
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [locationQuery, setLocationQuery] = React.useState("")
-  const [pagination, setPagination] = React.useState({})
-  const [selectedJob, setSelectedJob] = React.useState(null)
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
-  const [drawerHeight, setDrawerHeight] = React.useState(85)
-  const [showScrollTop, setShowScrollTop] = React.useState(false)
-  const scrollContainerRef = React.useRef(null)
-  const searchTimeoutRef = React.useRef(null)
-  const locationTimeoutRef = React.useRef(null)
+  const [jobType, setJobType] = useState("");
+  const [salaryMin, setSalaryMin] = useState("");
+  const [salaryMax, setSalaryMax] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [sortBy, setSortBy] = useState("latest");
+  const [allJobs, setAllJobs] = useState([]);
+  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [displayedJobs, setDisplayedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerHeight, setDrawerHeight] = useState(85);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+  const locationTimeoutRef = useRef(null);
+  const URL = "http://localhost:3000";
 
-  const jobTypeOptions = [
-    { value: "full-time", label: "Full Time" },
-    { value: "part-time", label: "Part Time" },
-    { value: "contract", label: "Contract" },
-    { value: "internship", label: "Internship" },
-    { value: "freelance", label: "Freelance" }
-  ]
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [jobsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const experienceLevelOptions = [
-    { value: "entry", label: "Entry Level" },
-    { value: "mid", label: "Mid Level" },
-    { value: "senior", label: "Senior Level" },
-    { value: "executive", label: "Executive" }
-  ]
+  // Dynamic options from backend data
+  const [jobTypeOptions, setJobTypeOptions] = useState([]);
+  const [industryOptions, setIndustryOptions] = useState([]);
+  const [locationOptions, setLocationOptions] = useState([]);
 
-  const salaryRangeOptions = [
-    { value: "0-20000", label: "₱0 - ₱20,000" },
-    { value: "20000-40000", label: "₱20,000 - ₱40,000" },
-    { value: "40000-60000", label: "₱40,000 - ₱60,000" },
-    { value: "60000-80000", label: "₱60,000 - ₱80,000" },
-    { value: "80000+", label: "₱80,000+" }
-  ]
+  const salaryMinOptions = [
+    { value: "0", label: "₱0" },
+    { value: "10000", label: "₱10,000" },
+    { value: "20000", label: "₱20,000" },
+    { value: "30000", label: "₱30,000" },
+    { value: "40000", label: "₱40,000" },
+    { value: "50000", label: "₱50,000" },
+    { value: "60000", label: "₱60,000" },
+    { value: "70000", label: "₱70,000" },
+    { value: "80000", label: "₱80,000" },
+    { value: "90000", label: "₱90,000" },
+    { value: "100000", label: "₱100,000" }
+  ];
 
-  const industryOptions = [
-    { value: "technology", label: "Technology" },
-    { value: "healthcare", label: "Healthcare" },
-    { value: "finance", label: "Finance" },
-    { value: "education", label: "Education" },
-    { value: "manufacturing", label: "Manufacturing" },
-    { value: "retail", label: "Retail" },
-    { value: "hospitality", label: "Hospitality" }
-  ]
+  const salaryMaxOptions = [
+    { value: "10000", label: "₱10,000" },
+    { value: "20000", label: "₱20,000" },
+    { value: "30000", label: "₱30,000" },
+    { value: "40000", label: "₱40,000" },
+    { value: "50000", label: "₱50,000" },
+    { value: "60000", label: "₱60,000" },
+    { value: "70000", label: "₱70,000" },
+    { value: "80000", label: "₱80,000" },
+    { value: "90000", label: "₱90,000" },
+    { value: "100000", label: "₱100,000" },
+    { value: "150000", label: "₱150,000" },
+    { value: "200000", label: "₱200,000" },
+    { value: "250000", label: "₱250,000" },
+    { value: "300000", label: "₱300,000" },
+    { value: "500000", label: "₱500,000" }
+  ];
 
   const sortOptions = [
     { value: "latest", label: "Latest First" },
     { value: "oldest", label: "Oldest First" },
     { value: "salary-high", label: "Highest Salary" },
     { value: "salary-low", label: "Lowest Salary" }
-  ]
+  ];
 
-  React.useEffect(() => {
-    loadAllJobs()
-  }, [])
+  useEffect(() => {
+    loadAllJobs();
+  }, []);
+
+  useEffect(() => {
+    // Update pagination when filtered jobs change
+    const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+    setTotalPages(totalPages);
+    setCurrentPage(1); // Reset to first page when filters change
+    updateDisplayedJobs();
+  }, [filteredJobs]);
+
+  useEffect(() => {
+    updateDisplayedJobs();
+  }, [currentPage, filteredJobs]);
 
   const loadAllJobs = async () => {
     try {
-      setLoading(true)
-      const response = await ApiService.getJobs({})
-      setAllJobs(response.jobs || [])
-      setFilteredJobs(response.jobs || [])
-      setPagination(response.pagination || {})
+      setLoading(true);
+      const response = await axios.get(`${URL}/jobs`);
+      console.log('Backend response:', response.data);
+      const jobs = response.data.jobPosting || [];
+      setAllJobs(jobs);
+      setFilteredJobs(jobs);
+      
+      // Extract unique values from backend data for dropdowns
+      extractDropdownOptions(jobs);
     } catch (error) {
-      console.error('Error loading jobs:', error)
-      setAllJobs([])
-      setFilteredJobs([])
-      setPagination({})
+      console.error('Error loading jobs:', error);
+      setAllJobs([]);
+      setFilteredJobs([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const filterJobs = React.useCallback(() => {
-    let filtered = [...allJobs]
+  const extractDropdownOptions = (jobs) => {
+    // Extract unique job types
+    const uniqueJobTypes = [...new Set(jobs.map(job => job.type).filter(Boolean))];
+    const jobTypeOptions = uniqueJobTypes.map(type => ({
+      value: type,
+      label: type
+    }));
+    setJobTypeOptions(jobTypeOptions);
+    console.log('Job Types from backend:', jobTypeOptions);
+
+    // Extract ALL unique industries from company data - including null/undefined
+    const allIndustries = jobs.map(job => job.company?.industry);
+    console.log('All industries raw:', allIndustries);
+    
+    // Filter out null/undefined/empty values and get unique industries
+    const uniqueIndustries = [...new Set(allIndustries.filter(industry => 
+      industry !== null && industry !== undefined && industry !== ''
+    ))];
+    
+    const industryOptions = uniqueIndustries.map(industry => ({
+      value: industry,
+      label: industry
+    }));
+    setIndustryOptions(industryOptions);
+    console.log('Industries from backend:', industryOptions);
+
+    // Extract unique locations
+    const uniqueLocations = [...new Set(jobs.map(job => job.location).filter(Boolean))];
+    const locationOptions = uniqueLocations.map(location => ({
+      value: location,
+      label: location
+    }));
+    setLocationOptions(locationOptions);
+    console.log('Locations from backend:', locationOptions);
+  };
+
+  const updateDisplayedJobs = () => {
+    const startIndex = (currentPage - 1) * jobsPerPage;
+    const endIndex = startIndex + jobsPerPage;
+    setDisplayedJobs(filteredJobs.slice(startIndex, endIndex));
+  };
+
+  const filterJobs = useCallback(() => {
+    let filtered = [...allJobs];
 
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(job => 
-        job.title.toLowerCase().includes(query) ||
-        job.company_name.toLowerCase().includes(query) ||
-        job.description.toLowerCase().includes(query) ||
-        job.requirements.some(req => req.toLowerCase().includes(query))
-      )
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(job =>
+        job.title?.toLowerCase().includes(query) ||
+        job.description?.toLowerCase().includes(query) ||
+        job.company?.name?.toLowerCase().includes(query)
+      );
     }
 
     if (locationQuery.trim()) {
-      const location = locationQuery.toLowerCase()
-      filtered = filtered.filter(job => 
-        job.location.toLowerCase().includes(location)
-      )
+      const location = locationQuery.toLowerCase();
+      filtered = filtered.filter(job =>
+        job.location?.toLowerCase().includes(location)
+      );
     }
 
     if (jobType) {
-      filtered = filtered.filter(job => 
-        job.job_type.toLowerCase() === jobType.toLowerCase()
-      )
+      filtered = filtered.filter(job =>
+        job.type?.toLowerCase() === jobType.toLowerCase()
+      );
     }
 
-    if (experienceLevel) {
+    // Separate salaryMin filter
+    if (salaryMin) {
+      const minSalaryValue = parseInt(salaryMin);
       filtered = filtered.filter(job => {
-        const salary = (job.salary_min + job.salary_max) / 2
-        switch (experienceLevel) {
-          case 'entry':
-            return salary <= 30000
-          case 'mid':
-            return salary > 30000 && salary <= 60000
-          case 'senior':
-            return salary > 60000 && salary <= 100000
-          case 'executive':
-            return salary > 100000
-          default:
-            return true
-        }
-      })
+        const jobSalaryMin = job.salaryMin || 0;
+        return jobSalaryMin >= minSalaryValue;
+      });
     }
 
-    if (salaryRange) {
+    // Separate salaryMax filter
+    if (salaryMax) {
+      const maxSalaryValue = parseInt(salaryMax);
       filtered = filtered.filter(job => {
-        const [min, max] = salaryRange.split('-').map(s => parseInt(s.replace(/[^\d]/g, '')))
-        switch (salaryRange) {
-          case '0-20000':
-            return job.salary_max <= 20000
-          case '20000-40000':
-            return job.salary_min >= 20000 && job.salary_max <= 40000
-          case '40000-60000':
-            return job.salary_min >= 40000 && job.salary_max <= 60000
-          case '60000-80000':
-            return job.salary_min >= 60000 && job.salary_max <= 80000
-          case '80000+':
-            return job.salary_min >= 80000
-          default:
-            return true
-        }
-      })
+        const jobSalaryMax = job.salaryMax || 0;
+        // If job has no max salary, don't filter it out
+        if (jobSalaryMax === 0) return true;
+        return jobSalaryMax <= maxSalaryValue;
+      });
+    }
+
+    // Combined salary range filter (both min and max)
+    if (salaryMin && salaryMax) {
+      const minSalaryValue = parseInt(salaryMin);
+      const maxSalaryValue = parseInt(salaryMax);
+      filtered = filtered.filter(job => {
+        const jobSalaryMin = job.salaryMin || 0;
+        const jobSalaryMax = job.salaryMax || 0;
+        
+        // Check if job salary range overlaps with selected range
+        return jobSalaryMin <= maxSalaryValue && (jobSalaryMax === 0 || jobSalaryMax >= minSalaryValue);
+      });
     }
 
     if (industry) {
-      filtered = filtered.filter(job => {
-        const company = job.company_name.toLowerCase()
-        switch (industry) {
-          case 'technology':
-            return company.includes('globe') || company.includes('tech')
-          case 'healthcare':
-            return company.includes('medical') || company.includes('hospital')
-          case 'finance':
-            return company.includes('sm') || company.includes('investment')
-          case 'education':
-            return company.includes('university') || company.includes('school')
-          case 'manufacturing':
-            return company.includes('manufacturing') || company.includes('production')
-          case 'retail':
-            return company.includes('retail') || company.includes('store')
-          case 'hospitality':
-            return company.includes('hotel') || company.includes('restaurant')
-          default:
-            return true
-        }
-      })
+      filtered = filtered.filter(job =>
+        job.company?.industry?.toLowerCase() === industry.toLowerCase()
+      );
     }
 
     switch (sortBy) {
       case 'latest':
-        filtered.sort((a, b) => new Date(b.posted_date) - new Date(a.posted_date))
-        break
+        filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        break;
       case 'oldest':
-        filtered.sort((a, b) => new Date(a.posted_date) - new Date(b.posted_date))
-        break
+        filtered.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        break;
       case 'salary-high':
-        filtered.sort((a, b) => b.salary_max - a.salary_max)
-        break
+        filtered.sort((a, b) => {
+          const avgSalaryA = ((a.salaryMin || 0) + (a.salaryMax || 0)) / 2;
+          const avgSalaryB = ((b.salaryMin || 0) + (b.salaryMax || 0)) / 2;
+          return avgSalaryB - avgSalaryA;
+        });
+        break;
       case 'salary-low':
-        filtered.sort((a, b) => a.salary_min - b.salary_min)
-        break
+        filtered.sort((a, b) => {
+          const avgSalaryA = ((a.salaryMin || 0) + (a.salaryMax || 0)) / 2;
+          const avgSalaryB = ((b.salaryMin || 0) + (b.salaryMax || 0)) / 2;
+          return avgSalaryA - avgSalaryB;
+        });
+        break;
       default:
-        break
+        break;
     }
 
-    setFilteredJobs(filtered)
-    setPagination({
-      total_jobs: filtered.length,
-      current_page: 1,
-      total_pages: 1,
-      per_page: filtered.length
-    })
-  }, [allJobs, searchQuery, locationQuery, jobType, experienceLevel, salaryRange, industry, sortBy])
+    setFilteredJobs(filtered);
+  }, [allJobs, searchQuery, locationQuery, jobType, salaryMin, salaryMax, industry, sortBy]);
 
-  React.useEffect(() => {
-    filterJobs()
-  }, [filterJobs])
+  useEffect(() => {
+    filterJobs();
+  }, [filterJobs]);
 
   const handleSearchChange = (value) => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-    searchTimeoutRef.current = setTimeout(() => {
-      setSearchQuery(value)
-    }, 300)
-  }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => setSearchQuery(value), 300);
+  };
 
   const handleLocationChange = (value) => {
-    if (locationTimeoutRef.current) {
-      clearTimeout(locationTimeoutRef.current)
-    }
-    locationTimeoutRef.current = setTimeout(() => {
-      setLocationQuery(value)
-    }, 300)
-  }
+    if (locationTimeoutRef.current) clearTimeout(locationTimeoutRef.current);
+    locationTimeoutRef.current = setTimeout(() => setLocationQuery(value), 300);
+  };
 
   const handleSearch = () => {
-  }
+    filterJobs();
+  };
 
   const handleViewDetails = (job) => {
-    setSelectedJob(job)
-    setIsDrawerOpen(true)
-  }
-
-  const handleResizeDrawer = (newHeight) => {
-    setDrawerHeight(Math.max(30, Math.min(95, newHeight)))
-  }
+    setSelectedJob(job);
+    setIsDrawerOpen(true);
+  };
 
   const toggleDrawerSize = () => {
-    setDrawerHeight(drawerHeight === 85 ? 50 : 85)
-  }
+    setDrawerHeight(drawerHeight === 85 ? 50 : 85);
+  };
 
   const scrollToTop = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }
+  };
 
   const handleScroll = (e) => {
-    setShowScrollTop(e.target.scrollTop > 100)
-  }
+    setShowScrollTop(e.target.scrollTop > 100);
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setLocationQuery('');
+    setJobType('');
+    setSalaryMin('');
+    setSalaryMax('');
+    setIndustry('');
+    setSortBy('latest');
+    setCurrentPage(1);
+    const searchInput = document.querySelector('input[placeholder*="Job title"]');
+    const locationInput = document.querySelector('input[placeholder*="Location"]');
+    if (searchInput) searchInput.value = '';
+    if (locationInput) locationInput.value = '';
+  };
+
+  // Pagination functions
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    scrollToTop();
+  };
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      scrollToTop();
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      scrollToTop();
+    }
+  };
+
+  const formatSalary = (job) => {
+    if (job.salaryMin && job.salaryMax) {
+      return `₱${job.salaryMin.toLocaleString()} - ₱${job.salaryMax.toLocaleString()}`;
+    } else if (job.salaryMin) {
+      return `₱${job.salaryMin.toLocaleString()}+`;
+    } else if (job.salaryMax) {
+      return `Up to ₱${job.salaryMax.toLocaleString()}`;
+    }
+    return "Salary not specified";
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f9f9f9' }}>
@@ -292,18 +403,18 @@ function JobsPage() {
                     type="text"
                     placeholder="Job title, keywords, or company name"
                     className="pl-10 h-12 text-lg"
-                    defaultValue={searchQuery}
                     onChange={(e) => handleSearchChange(e.target.value)}
                   />
                 </div>
                 <div className="flex-1 relative">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                  <Input
-                    type="text"
-                    placeholder="Location, city, or region"
-                    className="pl-10 h-12 text-lg"
-                    defaultValue={locationQuery}
-                    onChange={(e) => handleLocationChange(e.target.value)}
+                  <Combobox
+                    options={locationOptions}
+                    value={locationQuery}
+                    onValueChange={setLocationQuery}
+                    placeholder="All Locations"
+                    searchPlaceholder="Search locations..."
+                    className="h-12"
                   />
                 </div>
                 <Button 
@@ -318,9 +429,19 @@ function JobsPage() {
             </div>
 
             <div className="border-t pt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Advanced Filters</span>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Advanced Filters</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={clearAllFilters}
+                  className="text-xs"
+                >
+                  Clear All
+                </Button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -337,25 +458,25 @@ function JobsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Experience Level</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Minimum Salary</label>
                   <Combobox
-                    options={experienceLevelOptions}
-                    value={experienceLevel}
-                    onValueChange={setExperienceLevel}
-                    placeholder="All Levels"
-                    searchPlaceholder="Search experience levels..."
+                    options={salaryMinOptions}
+                    value={salaryMin}
+                    onValueChange={setSalaryMin}
+                    placeholder="Any Minimum"
+                    searchPlaceholder="Search min salary..."
                     className="h-12"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Salary Range</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Maximum Salary</label>
                   <Combobox
-                    options={salaryRangeOptions}
-                    value={salaryRange}
-                    onValueChange={setSalaryRange}
-                    placeholder="Any Salary"
-                    searchPlaceholder="Search salary ranges..."
+                    options={salaryMaxOptions}
+                    value={salaryMax}
+                    onValueChange={setSalaryMax}
+                    placeholder="Any Maximum"
+                    searchPlaceholder="Search max salary..."
                     className="h-12"
                   />
                 </div>
@@ -375,20 +496,29 @@ function JobsPage() {
 
               <div className="mt-6">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors"
+                  >
                     Remote Work
                   </Badge>
-                  <Badge variant="secondary" className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors"
+                  >
                     Urgent Hiring
                   </Badge>
-                  <Badge variant="secondary" className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors"
+                  >
                     Fresh Graduates
                   </Badge>
-                  <Badge variant="secondary" className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors"
+                  >
                     Work from Home
-                  </Badge>
-                  <Badge variant="secondary" className="cursor-pointer hover:bg-[#1c1c1c] hover:text-white transition-colors">
-                    Government Jobs
                   </Badge>
                 </div>
               </div>
@@ -396,491 +526,297 @@ function JobsPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Latest Job Openings</h2>
-              <p className="text-muted-foreground">
-                {loading ? 'Loading...' : `Showing ${filteredJobs.length} results`}
-                {(searchQuery || locationQuery || jobType || experienceLevel || salaryRange || industry) && (
-                  <span className="ml-2 text-green-600 text-sm font-medium">• Real-time filtered</span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-full sm:w-48">
-                <Combobox
-                  options={sortOptions}
-                  value={sortBy}
-                  onValueChange={setSortBy}
-                  placeholder="Sort by"
-                  searchPlaceholder="Search sort options..."
-                  className="h-10"
-                />
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <Card className="shadow-lg border-0">
-              <CardContent className="pt-12 pb-12">
-                <div className="text-center">
-                  <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Briefcase className="h-8 w-8 text-primary animate-pulse" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Loading Jobs...</h3>
-                  <p className="text-muted-foreground">Please wait while we fetch the latest job opportunities.</p>
+        {/* Results Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Filters Sidebar */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle className="text-lg">Sort By</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                        sortBy === option.value
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setSortBy(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          ) : filteredJobs.length === 0 ? (
-            <Card className="shadow-lg border-0">
-              <CardContent className="pt-12 pb-12">
-                <div className="text-center">
-                  <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Briefcase className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">No Jobs Found</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    Try adjusting your search criteria or filters to find more job opportunities. 
-                    New jobs are added daily!
+          </div>
+
+          {/* Jobs List */}
+          <div className="lg:col-span-3">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {filteredJobs.length} Job{filteredJobs.length !== 1 ? 's' : ''} Found
+                </h2>
+                {searchQuery && (
+                  <p className="text-muted-foreground mt-1">
+                    Results for "{searchQuery}"
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button 
-                      variant="outline" 
-                      className="hover:bg-[#1c1c1c] hover:text-white transition-colors"
-                      onClick={() => {
-                        setSearchQuery('')
-                        setLocationQuery('')
-                        setJobType('')
-                        setExperienceLevel('')
-                        setSalaryRange('')
-                        setIndustry('')
-                        setSortBy('latest')
-                      }}
-                    >
-                      Clear Filters
-                    </Button>
-                    <Button 
-                      className="hover:bg-[#1c1c1c] transition-colors"
-                      onClick={() => {
-                        setSearchQuery('')
-                        setLocationQuery('')
-                        setJobType('')
-                        setExperienceLevel('')
-                        setSalaryRange('')
-                        setIndustry('')
-                        setSortBy('latest')
-                      }}
-                    >
-                      Browse All Jobs
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredJobs.map((job) => (
-                <Card key={job.id} className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-semibold text-foreground">{job.title}</h3>
-                          {job.is_urgent && (
-                            <Badge className="bg-red-100 text-red-800">Urgent</Badge>
-                          )}
-                          {job.is_remote && (
-                            <Badge className="bg-green-100 text-green-800">Remote</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                          <Building2 className="h-4 w-4" />
-                          <span>{job.company_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{job.location}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{job.job_type}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-4 w-4" />
-                            <span>₱{job.salary_min?.toLocaleString()} - ₱{job.salary_max?.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Button 
-                          className="hover:bg-[#1c1c1c] transition-colors"
-                          onClick={() => handleViewDetails(job)}
-                        >
-                          View Details
-                        </Button>
-                        <Button variant="outline" className="hover:bg-[#1c1c1c] hover:text-white transition-colors">
-                          Apply Now
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold text-foreground mb-8 text-center">Popular Job Categories</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                    <Building2 className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold group-hover:text-white">Technology</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-gray-300">Software, IT, Data</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                    <Star className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold group-hover:text-white">Healthcare</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-gray-300">Medical, Nursing, Pharma</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                    <DollarSign className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold group-hover:text-white">Finance</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-gray-300">Banking, Accounting</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                    <Clock className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold group-hover:text-white">Customer Service</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-gray-300">Support, Sales, BPO</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                    <MapPin className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold group-hover:text-white">Education</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-gray-300">Teaching, Training</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                    <Briefcase className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold group-hover:text-white">Manufacturing</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-gray-300">Production, Engineering</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <div className="text-center mt-16">
-          <Card className="shadow-lg border-0 bg-primary/5">
-            <CardContent className="pt-8 pb-8">
-              <h3 className="text-2xl font-bold text-foreground mb-4">
-                Ready to Find Your Next Career?
-              </h3>
-              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Create your profile, upload your resume, and start applying to thousands of job opportunities across the Philippines.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/signup">
-                  <Button 
-                    size="lg" 
-                    className="px-8 py-4 text-lg hover:bg-[#1c1c1c] transition-colors"
-                  >
-                    Create Account
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-                <Link to="/upload-resume">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="px-8 py-4 text-lg hover:bg-[#1c1c1c] hover:text-white transition-colors"
-                  >
-                    Upload Resume for Job Matches
-                  </Button>
-                </Link>
-                <Link to="/">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="px-8 py-4 text-lg hover:bg-[#1c1c1c] hover:text-white transition-colors"
-                  >
-                    Back to Home
-                  </Button>
-                </Link>
+                )}
+                {(salaryMin || salaryMax) && (
+                  <p className="text-muted-foreground mt-1">
+                    Salary range: {salaryMin ? `₱${parseInt(salaryMin).toLocaleString()}+` : 'Any min'} - {salaryMax ? `Up to ₱${parseInt(salaryMax).toLocaleString()}` : 'Any max'}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Showing {displayedJobs.length} of {filteredJobs.length} jobs
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-6">
+                      <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2 mb-2"></div>
+                      <div className="h-3 bg-muted rounded w-2/3"></div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredJobs.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Briefcase className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Try adjusting your search criteria or clear filters to see more results.
+                  </p>
+                  <Button onClick={clearAllFilters}>
+                    Clear All Filters
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <div className="space-y-4 mb-8">
+                  {displayedJobs.map((job) => (
+                    <Card key={job.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-6" onClick={() => handleViewDetails(job)}>
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="text-xl font-semibold text-foreground mb-2">
+                              {job.title}
+                            </h3>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                              <div className="flex items-center gap-1">
+                                <Building2 className="h-4 w-4" />
+                                <span>{job.company?.name || 'Company'}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                <span>{job.location}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{job.type}</span>
+                              </div>
+                            </div>
+                            {job.company?.industry && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                                <span>Industry: {job.company.industry}</span>
+                              </div>
+                            )}
+                          </div>
+                          <Badge 
+                            variant={job.status === 'active' ? 'default' : 'secondary'}
+                            className="ml-2"
+                          >
+                            {job.status}
+                          </Badge>
+                        </div>
+
+                        <p className="text-foreground mb-4 line-clamp-2">
+                          {job.description}
+                        </p>
+
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1 text-lg font-semibold text-primary">
+                            <DollarSign className="h-4 w-4" />
+                            <span>{formatSalary(job)}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Posted {formatDate(job.createdAt)}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center space-x-2 mt-8">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    {getPageNumbers().map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={nextPage}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Job Details Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent 
-          className="transition-all duration-300 ease-in-out"
-          style={{ height: `${drawerHeight}vh` }}
-        >
-          <div className="flex items-center justify-center py-2 border-b bg-muted/30 cursor-row-resize">
-            <div className="flex items-center gap-2">
-              <GripHorizontal className="h-4 w-4 text-muted-foreground" />
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleResizeDrawer(drawerHeight - 10)}
-                  className="h-6 w-6 p-0 hover:bg-muted"
-                >
-                  <Minimize2 className="h-3 w-3" />
-                </Button>
-                <span className="text-xs text-muted-foreground px-2 min-w-[3rem] text-center">
-                  {drawerHeight}%
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleResizeDrawer(drawerHeight + 10)}
-                  className="h-6 w-6 p-0 hover:bg-muted"
-                >
-                  <Maximize2 className="h-3 w-3" />
+        <DrawerContent style={{ height: `${drawerHeight}vh` }}>
+          <div className="mx-auto w-full max-w-4xl">
+            <DrawerHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <DrawerTitle className="text-2xl">{selectedJob?.title}</DrawerTitle>
+                  <DrawerDescription>
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-4 w-4" />
+                        <span>{selectedJob?.company?.name || 'Company'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{selectedJob?.location}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{selectedJob?.type}</span>
+                      </div>
+                    </div>
+                  </DrawerDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={toggleDrawerSize}>
+                  {drawerHeight === 85 ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleDrawerSize}
-                className="h-6 px-2 text-xs hover:bg-muted"
-              >
-                {drawerHeight === 85 ? 'Minimize' : 'Maximize'}
-              </Button>
-            </div>
-          </div>
-
-          <div className="mx-auto w-full max-w-4xl flex flex-col h-full">
-            <DrawerHeader className="text-center flex-shrink-0">
-              <DrawerTitle className="text-2xl font-bold">{selectedJob?.title}</DrawerTitle>
-              <DrawerDescription className="text-lg">
-                {selectedJob?.company_name} • {selectedJob?.location}
-              </DrawerDescription>
             </DrawerHeader>
-            
-            {selectedJob && (
-              <>
-                <div 
-                  ref={scrollContainerRef}
-                  className="flex-1 overflow-y-auto px-4 space-y-6 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent relative"
-                  onScroll={handleScroll}
-                >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Salary Range</p>
-                          <p className="font-semibold">₱{selectedJob.salary_min?.toLocaleString()} - ₱{selectedJob.salary_max?.toLocaleString()}</p>
+            <div className="p-4 pb-8 overflow-auto h-full">
+              {selectedJob && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <DollarSign className="h-5 w-5" />
+                          Salary Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-primary">
+                          {formatSalary(selectedJob)}
                         </div>
-                      </div>
+                        <div className="text-sm text-muted-foreground mt-2">
+                          Minimum: ₱{selectedJob.salaryMin?.toLocaleString() || 'Not specified'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Maximum: ₱{selectedJob.salaryMax?.toLocaleString() || 'Not specified'}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Job Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Type:</span>
+                            <span className="font-medium">{selectedJob.type}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Industry:</span>
+                            <span className="font-medium">{selectedJob.company?.industry || 'Not specified'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Status:</span>
+                            <Badge variant={selectedJob.status === 'active' ? 'default' : 'secondary'}>
+                              {selectedJob.status}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Posted:</span>
+                            <span className="font-medium">{formatDate(selectedJob.createdAt)}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Job Description</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="whitespace-pre-wrap">{selectedJob.description}</p>
                     </CardContent>
                   </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Job Type</p>
-                          <p className="font-semibold">{selectedJob.job_type}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-purple-600" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Posted</p>
-                          <p className="font-semibold">{new Date(selectedJob.posted_date).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Job Description
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {selectedJob.description}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="h-5 w-5" />
-                      Requirements
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedJob.requirements?.map((req, index) => (
-                        <Badge key={index} variant="secondary" className="text-sm">
-                          {req}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Contact Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Mail className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">HR Email</p>
-                          <p className="font-medium">hr@{selectedJob.company_name.toLowerCase().replace(/\s+/g, '')}.com</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Phone className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Contact Number</p>
-                          <p className="font-medium">+63 2 8XXX XXXX</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Building2 className="h-5 w-5 text-purple-600" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Office Address</p>
-                        <p className="font-medium">{selectedJob.location}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      About {selectedJob.company_name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {selectedJob.company_name} is a leading company in the Philippines, committed to providing excellent 
-                      career opportunities for talented professionals. We offer competitive compensation, comprehensive 
-                      benefits, and a supportive work environment that fosters growth and development.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                  {showScrollTop && (
-                    <div className="fixed bottom-20 right-6 z-50">
-                      <Button
-                        onClick={scrollToTop}
-                        size="sm"
-                        className="rounded-full shadow-lg hover:bg-[#1c1c1c] transition-colors"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-shrink-0 border-t bg-background px-4 py-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button className="flex-1 hover:bg-[#1c1c1c] transition-colors">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Apply via Email
+                  <div className="flex gap-4">
+                    <Button className="flex-1">
+                      Apply Now
+                      <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
-                    <Button variant="outline" className="flex-1 hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                    <Button variant="outline">
                       <Heart className="h-4 w-4 mr-2" />
-                      Save Job
+                      Save
                     </Button>
-                    <Button variant="outline" className="flex-1 hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                    <Button variant="outline">
                       <Share2 className="h-4 w-4 mr-2" />
                       Share
                     </Button>
                   </div>
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </DrawerContent>
       </Drawer>
 
       <Footer />
     </div>
-  )
+  );
 }
 
-export default JobsPage
-
+export default JobsPage;

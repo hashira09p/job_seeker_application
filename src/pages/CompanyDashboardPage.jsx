@@ -1117,6 +1117,8 @@ const handleUpdateJob = async (updatedJob) => {
             <option value="Part-time">Part-time</option>
             <option value="Remote">Remote</option>
             <option value="Contract">Contract</option>
+            <option value="Contract">Internship</option>
+            <option value="Contract">Freelance</option>
           </select>
         </div>
   

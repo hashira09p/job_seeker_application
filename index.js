@@ -278,6 +278,26 @@ app.get("/companies", async(req, res) => {
   }
 })
 
+//jobPosting for User
+
+app.get("/jobs", async(req, res) => {
+  try{
+    const jobPosting = await JobPostings.findAll(
+      {
+        include:{
+          model:Companies,
+          as:"company",
+          attributes:['name', "industry"]
+          }
+      })
+    
+    console.log(jobPosting)
+    res.status(200).json({message: "OK", jobPosting})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
