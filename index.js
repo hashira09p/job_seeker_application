@@ -11,7 +11,10 @@ import session from 'express-session';
 import db from './models/index.js';
 import { profile } from 'console';
 import jwt from "jsonwebtoken"
-import { Trophy } from 'lucide-react';
+import { FileEdit, Trophy } from 'lucide-react';
+import multer from "multer"
+import fs from "fs"
+import path from 'path';
 
 
 dotenv.config()
@@ -21,6 +24,20 @@ const port = 3000;
 const app = express();
 const saltRounds = 15;
 const JWT_SECRET = "just_a_secret"
+const uploadDir = "uploads/resumes"
+
+if(!fs.existsSync(uploadDir)){
+  fs.mkdirSync(uploadDir, {recursive: true})
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+})
+
+const upload = multer({storage, limits:{
+  fieldSize:  5 * 1024 * 1024
+}})
 
 app.use(session(
   {
@@ -37,7 +54,7 @@ app.use(cors({
   origin: "http://localhost:5173", // your React frontend
   credentials: true
 }));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 async function authenticate(){
   try{
@@ -53,7 +70,7 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
   console.log(token)
-  if (!token) return res.sendStatus(401);
+  if (!token) return res.sendStatus(401).json({message: "Wrong Token"});
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403);
@@ -74,7 +91,7 @@ app.get("/auth/google",
 
 app.get("/auth/google/app",
   passport.authenticate("google",{
-    successRedirect:"http://localhost:3000/",
+    successRedirect:"http://localhost:5173/",
     failureRedirect:"/signup"
   })
 )
@@ -268,7 +285,7 @@ app.delete("/jobPostings/:id", authenticateToken, async(req,res) => {
 })
 
 //User
-//Company Page for User
+//Company Page for User side
 app.get("/companies", async(req, res) => {
   try{
     const result = await Companies.findAll()
@@ -278,7 +295,7 @@ app.get("/companies", async(req, res) => {
   }
 })
 
-//jobPosting for User
+//jobPosting for User side
 
 app.get("/jobs", async(req, res) => {
   try{
@@ -290,13 +307,20 @@ app.get("/jobs", async(req, res) => {
           attributes:['name', "industry"]
           }
       })
-    
-    console.log(jobPosting)
+    // console.log(jobPosting)
     res.status(200).json({message: "OK", jobPosting})
   }catch(err){
     console.log(err.message)
   }
 })
+
+//Passing application for User side
+app.post("/application-submit", authenticateToken,  
+  upload.single("resumeFile"),  (req, res) => {
+  console.log(req.file)
+  console.log(req.user)
+  
+} )
 
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,

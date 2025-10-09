@@ -39,6 +39,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.539.0",
     "mongodb": "^6.19.0",
+    "multer": "^2.0.2",
     "passport": "^0.7.0",
     "passport-google-oauth2": "^0.2.0",
     "pg": "^8.16.3",

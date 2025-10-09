@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from 'react-router-dom';
 import {
-  Search, MapPin, Briefcase, Filter, Star, Building2, Clock, DollarSign, ArrowRight, Mail, Phone, Users, Calendar, FileText, Award, Heart, Share2, GripHorizontal, Maximize2, Minimize2, ChevronUp, ChevronLeft, ChevronRight
+  Search, MapPin, Briefcase, Filter, Star, Building2, Clock, DollarSign, ArrowRight, Mail, Phone, Users, Calendar, FileText, Award, Heart, Share2, GripHorizontal, Maximize2, Minimize2, ChevronUp, ChevronLeft, ChevronRight, Upload, X, File, User, MailIcon
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -39,6 +40,17 @@ function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Application state
+  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [applicationForm, setApplicationForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    coverLetter: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dynamic options from backend data
   const [jobTypeOptions, setJobTypeOptions] = useState([]);
@@ -304,6 +316,112 @@ function JobsPage() {
     const locationInput = document.querySelector('input[placeholder*="Location"]');
     if (searchInput) searchInput.value = '';
     if (locationInput) locationInput.value = '';
+  };
+
+  // Application functions
+  const handleApplyNow = () => {
+    setIsApplyDialogOpen(true);
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please upload a PDF or Word document');
+        return;
+      }
+      
+      // Check file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+      
+      setResumeFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setResumeFile(null);
+  };
+
+  const handleInputChange = (field, value) => {
+    setApplicationForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmitApplication = async () => {
+    // Basic validation
+    // if (!applicationForm.fullName.trim()) {
+    //   alert('Please enter your full name');
+    //   return;
+    // }
+    
+    // if (!applicationForm.email.trim()) {
+    //   alert('Please enter your email');
+    //   return;
+    // }
+    
+    // if (!resumeFile) {
+    //   alert('Please upload your resume');
+    //   return;
+    // }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create FormData for file upload
+      // const formData = new FormData();
+      // formData.append('resume', resumeFile);
+      // formData.append('fullName', applicationForm.fullName);
+      // formData.append('email', applicationForm.email);
+      // formData.append('phone', applicationForm.phone);
+      // formData.append('coverLetter', applicationForm.coverLetter);
+      // formData.append('jobId', selectedJob.id);
+      // formData.append('jobTitle', selectedJob.title);
+      // formData.append('companyName', selectedJob.company?.name || 'Unknown Company');
+
+      // Here you would send the application to your backend
+      // const response = await axios.post(`${URL}/applications`, formData, {
+      //   headers: {
+      //     'Content-Type': 'multipart/form-data',
+      //   },
+      // });
+
+      // Simulate API call
+      // await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Success - reset form and close dialog
+      const formData = new FormData();
+      formData.append("resumeFile", resumeFile);
+      const token = localStorage.getItem("token")
+
+      console.log("Testing")
+      const result = await axios.post(`${URL}/application-submit`, formData,{
+        headers: {Authorization: `Bearer ${token}`}
+      })
+      setApplicationForm({
+        fullName: "",
+        email: "",
+        phone: "",
+        coverLetter: ""
+      });
+      setResumeFile(null);
+      setIsApplyDialogOpen(false);
+      
+      // Show success message
+      alert(`Application submitted successfully for ${selectedJob.title} at ${selectedJob.company?.name || 'the company'}!`);
+      
+    } catch (error) {
+      console.error('Error submitting application:', error.message);
+      alert('Error submitting application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Pagination functions
@@ -794,7 +912,7 @@ function JobsPage() {
                   </Card>
 
                   <div className="flex gap-4">
-                    <Button className="flex-1">
+                    <Button className="flex-1" onClick={handleApplyNow}>
                       Apply Now
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
@@ -814,9 +932,160 @@ function JobsPage() {
         </DrawerContent>
       </Drawer>
 
+      {/* Application Dialog */}
+      <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Apply for {selectedJob?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Submit your application for {selectedJob?.title} at {selectedJob?.company?.name || 'the company'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Personal Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Full Name *</label>
+                  <Input
+                    placeholder="Enter your full name"
+                    value={applicationForm.fullName}
+                    onChange={(e) => handleInputChange('fullName', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email *</label>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={applicationForm.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone Number</label>
+                <Input
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  value={applicationForm.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Resume Upload */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <File className="h-4 w-4" />
+                Resume Upload *
+              </h3>
+              
+              {!resumeFile ? (
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary transition-colors">
+                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Upload your resume (PDF, DOC, DOCX)
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Maximum file size: 5MB
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('resume-upload').click()}
+                  >
+                    Choose File
+                  </Button>
+                  <input
+                    id="resume-upload"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    name="resume"
+                  />
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 flex items-center justify-between bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <File className="h-6 w-6 text-primary" />
+                    <div>
+                      <p className="font-medium">{resumeFile.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveFile}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Cover Letter */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <MailIcon className="h-4 w-4" />
+                Cover Letter (Optional)
+              </h3>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tell us why you're a good fit for this position</label>
+                <textarea
+                  placeholder="Write your cover letter here..."
+                  rows={4}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={applicationForm.coverLetter}
+                  onChange={(e) => handleInputChange('coverLetter', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsApplyDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitApplication}
+              disabled={isSubmitting || !resumeFile || !applicationForm.fullName || !applicationForm.email}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Application'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );
 }
 
-export default JobsPage;
+export default JobsPage;  

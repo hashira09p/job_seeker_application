@@ -40,6 +40,7 @@ function LoginPage() {
       const data = result.data
       if(data.role == "User"){
         localStorage.setItem("token", data.token);
+        console.log(data)
         navigate("/");
       }else{
         navigate("/company-dashboard");
