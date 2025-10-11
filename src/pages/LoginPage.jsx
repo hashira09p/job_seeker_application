@@ -40,8 +40,11 @@ function LoginPage() {
       const data = result.data
       if(data.role == "User"){
         localStorage.setItem("token", data.token);
+        console.log(data)
+        alert("Login Success")
         navigate("/");
       }else{
+        alert("Login Success")
         navigate("/company-dashboard");
         localStorage.setItem("token", data.token);
       }
@@ -49,8 +52,10 @@ function LoginPage() {
       console.log(err.response.data.message);
 
       if(err.response.data.message == "unregistered"){
+        alert("Your account is not registered yet! Please register first!")
         navigate("/signup")
       }else{
+        alert("Wrong Password")
         navigate("/login")
       }
     }

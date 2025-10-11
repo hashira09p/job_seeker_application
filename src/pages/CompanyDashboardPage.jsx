@@ -126,18 +126,24 @@ function CompanyDashboardPage() {
     async function fetchData() {
       const token = localStorage.getItem("token");
       if (!token) {
-        navigate("/login");
-      } else {
-        try {
-          const result = await axios.get(`${URL}/companyDashboard`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+        navigate("/")
+        return;
+      }
+
+      try{
+        const result = await axios.get(`${URL}/companyDashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log(result.data.role)
+        if(result.data.role == "User"){
+          navigate("/")
+        }else{
           setUser(result.data);
           setJobPostings(result.data.jobPostings || []);
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          alert("Error loading dashboard data");
         }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        alert("Error loading dashboard data");
       }
     }
     fetchData();
@@ -1117,6 +1123,8 @@ const handleUpdateJob = async (updatedJob) => {
             <option value="Part-time">Part-time</option>
             <option value="Remote">Remote</option>
             <option value="Contract">Contract</option>
+            <option value="Contract">Internship</option>
+            <option value="Contract">Freelance</option>
           </select>
         </div>
   

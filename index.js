@@ -11,16 +11,33 @@ import session from 'express-session';
 import db from './models/index.js';
 import { profile } from 'console';
 import jwt from "jsonwebtoken"
-import { Trophy } from 'lucide-react';
+import { FileEdit, Trophy } from 'lucide-react';
+import multer from "multer"
+import fs from "fs"
+import path from 'path';
 
 
 dotenv.config()
 
-const {Users, Companies, JobPostings} = db
+const {Users, Companies, JobPostings, Documents} = db
 const port = 3000;
 const app = express();
 const saltRounds = 15;
 const JWT_SECRET = "just_a_secret"
+const uploadDir = "uploads/resumes"
+
+if(!fs.existsSync(uploadDir)){
+  fs.mkdirSync(uploadDir, {recursive: true})
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+})
+
+const upload = multer({storage, limits:{
+  fieldSize:  5 * 1024 * 1024 //50MB
+}})
 
 app.use(session(
   {
@@ -37,7 +54,7 @@ app.use(cors({
   origin: "http://localhost:5173", // your React frontend
   credentials: true
 }));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 async function authenticate(){
   try{
@@ -53,7 +70,7 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
   console.log(token)
-  if (!token) return res.sendStatus(401);
+  if (!token) return res.sendStatus(401).json({message: "Wrong Token"});
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403);
@@ -74,7 +91,7 @@ app.get("/auth/google",
 
 app.get("/auth/google/app",
   passport.authenticate("google",{
-    successRedirect:"http://localhost:3000/",
+    successRedirect:"http://localhost:5173/",
     failureRedirect:"/signup"
   })
 )
@@ -169,9 +186,9 @@ app.post("/submit-login", async(req, res) => {
       console.log(result)
       if (result){
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "5h" })
-        res.status(200).json({success: true, message: "success", token, role})
+        res.status(200).json({success: result, message: "success", token, role})
       }else{
-        res.status(400).json({success: false, message: "wrong password"})
+        res.status(400).json({success: result, message: "wrong password"})
       }
     })
   }catch(err){
@@ -182,6 +199,17 @@ app.post("/submit-login", async(req, res) => {
 //Employer
 //Company Page for Employer
 app.get("/companyDashboard", authenticateToken, async(req, res) => {
+  const user = await Users.findOne({
+    where: {
+      id: req.user.id
+    }
+  })
+
+  if(user.role == "User"){
+    res.status(200).json({role:user.role})
+    return;
+  }
+
   const companies = await Companies.findOne({ 
     where:{
       userID: req.user.id,
@@ -268,7 +296,7 @@ app.delete("/jobPostings/:id", authenticateToken, async(req,res) => {
 })
 
 //User
-//Company Page for User
+//Company Page for User side
 app.get("/companies", async(req, res) => {
   try{
     const result = await Companies.findAll()
@@ -278,6 +306,90 @@ app.get("/companies", async(req, res) => {
   }
 })
 
+//jobPosting for User side
+
+app.get("/jobs", async(req, res) => {
+  try{
+    const jobPosting = await JobPostings.findAll(
+      {
+        include:{
+          model:Companies,
+          as:"company",
+          attributes:['name', "industry"]
+          }
+      })
+    // console.log(jobPosting)
+    res.status(200).json({message: "OK", jobPosting})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+//Saving the resume to backend
+app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(req, res) => {
+  console.log("Hello")
+  console.log(req.file)
+  const {filename, destination} = req.file
+  
+  try{
+    const result = await Documents.create({
+      userID: req.user.id,
+      docType: path.extname(filename),
+      fileName: filename,
+      fileDir: req.file.path
+    })
+    
+    res.status(200).json({message: "Saved Success", document: result})
+  }catch(err){
+    console.log(err.message)
+    res.status(400).json({message: "Delete first your existing file"})
+    return
+  }
+})
+
+//getting the resume from backend
+app.get("/getResume", authenticateToken, async(req, res) => {
+  console.log("hello")
+  try{
+    const result = await Documents.findOne({
+      where:{
+        userID: req.user.id
+      }
+    })
+    res.status(200).json({message: "Saved Success", resumePath: result.fileDir})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+app.get("/downloadResume", authenticateToken, async(req, res) => {
+  console.log("hello")
+  try{
+    const result = await Documents.findOne({
+      where:{
+        userID: req.user.id
+      }
+    })
+    res.status(200).json({message: "Saved Success", resumePath: result.fileDir})
+  }catch(err){
+    console.log(err.message)
+  }
+})
+
+//Passing application for User side
+app.post("/application-submit", authenticateToken,  
+  upload.single("resumeFile"),  (req, res) => {
+  console.log(req.file)
+  console.log(req.user)
+})
+
+// app.post("/resume-submit", authenticateToken,  
+//   upload.single("resumeFile"),  (req, res) => {
+//   console.log(req.file)
+//   console.log(req.user)
+
+// } )
+
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -286,7 +398,6 @@ passport.use("google", new GoogleStrategy({
 
 async(request, accessToken, refreshToken, profile, done) => {
   try{
-
     console.log(profile)
 
     const result = await Users.findOne({
