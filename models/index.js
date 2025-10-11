@@ -1,6 +1,7 @@
-import Users from "./Users.js"
-import Companies from "./Companies.js";
-import JobPostings from "./JobPostings.js"
+import Users from "./user.js"
+import Companies from "./company.js";
+import JobPostings from "./jobPosting.js"
+import Documents from "./document.js"
 import fs from "fs"
 import path from "path";
 import sequelize from "../config/database.js";
@@ -15,9 +16,11 @@ db.Sequelize = Sequelize;
 db.Users = Users;
 db.Companies = Companies;
 db.JobPostings = JobPostings;
+db.Documents = Documents;
 
 Users.associate(db);
 Companies.associate(db);
 JobPostings.associate(db);
+Documents.associate(db);
 
 export default db;

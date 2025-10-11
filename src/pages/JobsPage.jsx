@@ -333,9 +333,9 @@ function JobsPage() {
         return;
       }
       
-      // Check file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
+      // Check file size (50MB limit)
+      if (file.size > 50 * 1024 * 1024) {
+        alert('File size must be less than 50MB');
         return;
       }
       
@@ -356,54 +356,43 @@ function JobsPage() {
 
   const handleSubmitApplication = async () => {
     // Basic validation
-    // if (!applicationForm.fullName.trim()) {
-    //   alert('Please enter your full name');
-    //   return;
-    // }
+    if (!applicationForm.fullName.trim()) {
+      alert('Please enter your full name');
+      return;
+    }
     
-    // if (!applicationForm.email.trim()) {
-    //   alert('Please enter your email');
-    //   return;
-    // }
+    if (!applicationForm.email.trim()) {
+      alert('Please enter your email');
+      return;
+    }
     
-    // if (!resumeFile) {
-    //   alert('Please upload your resume');
-    //   return;
-    // }
+    if (!resumeFile) {
+      alert('Please upload your resume');
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      // Create FormData for file upload
-      // const formData = new FormData();
-      // formData.append('resume', resumeFile);
-      // formData.append('fullName', applicationForm.fullName);
-      // formData.append('email', applicationForm.email);
-      // formData.append('phone', applicationForm.phone);
-      // formData.append('coverLetter', applicationForm.coverLetter);
-      // formData.append('jobId', selectedJob.id);
-      // formData.append('jobTitle', selectedJob.title);
-      // formData.append('companyName', selectedJob.company?.name || 'Unknown Company');
-
-      // Here you would send the application to your backend
-      // const response = await axios.post(`${URL}/applications`, formData, {
-      //   headers: {
-      //     'Content-Type': 'multipart/form-data',
-      //   },
-      // });
-
-      // Simulate API call
-      // await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Success - reset form and close dialog
       const formData = new FormData();
       formData.append("resumeFile", resumeFile);
-      const token = localStorage.getItem("token")
+      formData.append("fullName", applicationForm.fullName);
+      formData.append("email", applicationForm.email);
+      formData.append("phone", applicationForm.phone);
+      formData.append("coverLetter", applicationForm.coverLetter);
+      formData.append("jobId", selectedJob?.id);
+      
+      const token = localStorage.getItem("token");
 
-      console.log("Testing")
-      const result = await axios.post(`${URL}/application-submit`, formData,{
-        headers: {Authorization: `Bearer ${token}`}
-      })
+      console.log("Submitting application...");
+      const result = await axios.post(`${URL}/application-submit`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Reset form
       setApplicationForm({
         fullName: "",
         email: "",
@@ -417,7 +406,7 @@ function JobsPage() {
       alert(`Application submitted successfully for ${selectedJob.title} at ${selectedJob.company?.name || 'the company'}!`);
       
     } catch (error) {
-      console.error('Error submitting application:', error.message);
+      console.error('Error submitting application:', error);
       alert('Error submitting application. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -999,7 +988,7 @@ function JobsPage() {
                     Upload your resume (PDF, DOC, DOCX)
                   </p>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Maximum file size: 5MB
+                    Maximum file size: 50MB
                   </p>
                   <Button 
                     variant="outline" 
@@ -1088,4 +1077,4 @@ function JobsPage() {
   );
 }
 
-export default JobsPage;  
+export default JobsPage;
