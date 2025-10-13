@@ -18,7 +18,7 @@ Users.init({
 
 Users.associate = (models) => {
     Users.hasOne(models.Companies,{foreignKey: "userID", as: "company"})
-    Users.hasOne(models.Documents,{foreignKey: "userID", as:"application"})
+    Users.hasOne(models.Documents,{foreignKey: "userID", as:"document"})
 }
 
 export default Users;

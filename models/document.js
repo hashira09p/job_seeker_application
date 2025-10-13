@@ -17,7 +17,7 @@ Documents.init({
 });
 
 Documents.associate =(models) => {
-  Documents.belongsTo(models.Users,{foreignKey: "userID", as: ""})
+  Documents.belongsTo(models.Users,{foreignKey: "userID", as: "user"})
 }
 
 export default Documents;

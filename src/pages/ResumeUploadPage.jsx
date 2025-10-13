@@ -218,104 +218,56 @@ function ResumeUploadPage() {
   }
 
   // Download the file using the resumePath from backend
-  const handleDownload = async () => {
-    if (!storedResume || !storedResume.resumePath) {
-      setUploadError("No resume file available for download");
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("token");
-      const cleanedPath = cleanFilePath(storedResume.resumePath);
-      
-      console.log("Download details:", {
-        originalPath: storedResume.resumePath,
-        cleanedPath: cleanedPath,
-        fileName: getFileNameFromPath(cleanedPath),
-        downloadUrl: `${URL}/${cleanedPath}`
-      });
-
-      // First try: Use backend download endpoint
-      try {
-        const response = await axios.get(`${URL}/downloadResume`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          responseType: 'blob'
-        });
-
-        // Check if we got a valid file
-        if (response.data && response.data.size > 0) {
-          const blob = new Blob([response.data]);
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          
-          const fileName = getFileNameFromPath(storedResume.resumePath) || 'resume.docx';
-          link.setAttribute('download', fileName);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-          return;
-        }
-      } catch (apiError) {
-        console.log("API download failed, trying direct file access...", apiError);
-      }
-
-      // Second try: Direct file access
-      const downloadUrl = `${URL}/${cleanedPath}`;
-      
-      // Test if file exists first
-      try {
-        await axios.head(downloadUrl);
-      } catch (headError) {
-        console.error("File not found at:", downloadUrl);
-        setUploadError(`File not found. Please check if the file exists at: ${cleanedPath}`);
-        return;
-      }
-
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = getFileNameFromPath(cleanedPath);
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-    } catch (error) {
-      console.error('Error downloading resume:', error);
-      setUploadError(`Failed to download resume: ${error.message}`);
-    }
+  // Download the file using the resumePath from backend
+const handleDownload = async () => {
+  if (!storedResume || !storedResume.resumePath) {
+    setUploadError("No resume file available for download");
+    return;
   }
 
-  // Preview the file using the resumePath from backend
-  const handlePreview = async () => {
-    if (!storedResume || !storedResume.resumePath) {
-      setUploadError("No resume file available for preview");
-      return;
-    }
+  try {
+    const token = localStorage.getItem("token");
+    
+    // Use the API endpoint instead of direct file access
+    const response = await axios.get(`${URL}/downloadResume`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      responseType: 'blob' // Important for file downloads
+    });
 
-    try {
-      const cleanedPath = cleanFilePath(storedResume.resumePath);
-      const previewUrl = `${URL}/${cleanedPath}`;
-      
-      console.log("Attempting preview from:", previewUrl);
-      
-      // Test if file exists first
-      try {
-        await axios.head(previewUrl);
-        window.open(previewUrl, '_blank');
-      } catch (headError) {
-        console.error("File not found for preview:", previewUrl);
-        setUploadError(`File not found for preview. Please check if the file exists at: ${cleanedPath}`);
+    // Create blob from response
+    const blob = new Blob([response.data]);
+    const url = window.URL.createObjectURL(blob);
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Get filename from response headers or use default
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = 'resume.pdf';
+    
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1];
       }
-      
-    } catch (error) {
-      console.error('Error previewing resume:', error);
-      setUploadError("Failed to preview resume");
     }
+    
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    window.URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error('Download error:', error);
+    setUploadError(`Download failed: ${error.message}`);
   }
+}
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f9f9f9' }}>
@@ -448,7 +400,7 @@ function ResumeUploadPage() {
                             <div className="flex items-center gap-2">
                               {storedResume && (
                                 <>
-                                  <Button 
+                                  {/* <Button 
                                     variant="outline" 
                                     size="sm" 
                                     type="button"
@@ -456,7 +408,7 @@ function ResumeUploadPage() {
                                   >
                                     <Eye className="h-4 w-4 mr-2" />
                                     Preview
-                                  </Button>
+                                  </Button> */}
                                   <Button 
                                     variant="outline" 
                                     size="sm" 

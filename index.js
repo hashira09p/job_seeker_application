@@ -363,24 +363,42 @@ app.get("/getResume", authenticateToken, async(req, res) => {
 })
 
 app.get("/downloadResume", authenticateToken, async(req, res) => {
-  console.log("hello")
-  try{
+  try {
     const result = await Documents.findOne({
-      where:{
-        userID: req.user.id
-      }
-    })
-    res.status(200).json({message: "Saved Success", resumePath: result.fileDir})
-  }catch(err){
-    console.log(err.message)
+      where: { userID: req.user.id }
+    });
+    
+    if (!result || !result.fileDir) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    // Use process.cwd() instead of __dirname
+    const filePath = path.join(process.cwd(), result.fileDir);
+
+    console.log(filePath)
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found on server" });
+    }
+
+    // Set proper headers for file download
+    const fileName = path.basename(filePath);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', 'application/pdf');
+
+    // Stream the file to the response
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+  } catch(err) {
+    console.log(err.message);
+    res.status(500).json({ message: "Server error" });
   }
-})
+});
 
 //Passing application for User side
-app.post("/application-submit", authenticateToken,  
-  upload.single("resumeFile"),  (req, res) => {
-  console.log(req.file)
-  console.log(req.user)
+app.post("/application-submit", authenticateToken, (req, res) => {
+  console.log(req.user.id.document)
 })
 
 // app.post("/resume-submit", authenticateToken,  

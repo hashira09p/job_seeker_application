@@ -1230,6 +1230,7 @@ const handleUpdateJob = async (updatedJob) => {
                     value={editingJob.title || ''}
                     onChange={(e) => setEditingJob({...editingJob, title: e.target.value})}
                     placeholder="e.g. Software Engineer"
+                    required
                   />
                 </div>
                 
@@ -1239,6 +1240,7 @@ const handleUpdateJob = async (updatedJob) => {
                     value={editingJob.location || ''}
                     onChange={(e) => setEditingJob({...editingJob, location: e.target.value})}
                     placeholder="e.g. Manila, Remote"
+                    required
                   />
                 </div>
               </div>
@@ -1249,6 +1251,7 @@ const handleUpdateJob = async (updatedJob) => {
                   <Select 
                     value={editingJob.type || ''}
                     onValueChange={(value) => setEditingJob({...editingJob, type: value})}
+                    required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select job type" />
@@ -1289,6 +1292,7 @@ const handleUpdateJob = async (updatedJob) => {
                     value={editingJob.salaryMin || ''}
                     onChange={(e) => setEditingJob({...editingJob, salaryMin: e.target.value})}
                     placeholder="₱30,000"
+                    required
                   />
                 </div>
                 
@@ -1299,6 +1303,7 @@ const handleUpdateJob = async (updatedJob) => {
                     value={editingJob.salaryMax || ''}
                     onChange={(e) => setEditingJob({...editingJob, salaryMax: e.target.value})}
                     placeholder="₱50,000"
+                    required
                   />
                 </div>
               </div>
