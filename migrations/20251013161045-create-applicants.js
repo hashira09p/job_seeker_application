@@ -21,19 +21,22 @@ export default {
       phone: {
         type: Sequelize.STRING
       },
-      jobID: {
+      JobPostingId: {
         type: Sequelize.INTEGER,
         references:{
           model: "JobPostings",
           key: "id"
-        }
+        },
+        onDelete: "CASCADE",
+        allowNull:false
       },
       userID: {
         type: Sequelize.INTEGER,
         references:{
           model: "Users",
           key: "id"
-        }
+        },
+        allowNull:false
       },
       status: {
         type: Sequelize.STRING,
@@ -44,7 +47,8 @@ export default {
         references:{
           model: "Documents",
           key: "id"
-        }
+        },
+        allowNull:false
       },
       createdAt: {
         allowNull: false,

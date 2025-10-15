@@ -18,6 +18,7 @@ Documents.init({
 
 Documents.associate =(models) => {
   Documents.belongsTo(models.Users,{foreignKey: "userID", as: "user"})
+  Documents.belongsToMany(models.JobPostings, {through:"Applicants",foreignKey: "documentID", as: "jobSent"})
 }
 
 export default Documents;

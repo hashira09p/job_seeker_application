@@ -18,7 +18,18 @@ JobPostings.init({
 });  
 
 JobPostings.associate = (models) => {
-  JobPostings.belongsTo(models.Companies,{foreignKey: "companyID", as: "company"})
+  JobPostings.belongsTo(models.Companies,{foreignKey: "companyID", as: "company"});
+  JobPostings.hasMany(models.Applicants, {
+    foreignKey: "JobPostingId",
+    as: "applicants",
+    onDelete: "CASCADE" 
+  })
+
+  JobPostings.belongsToMany(models.Users,{
+    through: "Applicants",
+    foreignKey: "JobPostingId",
+    as: "applicant", onDelete: "CASCADE" 
+  })
 }
 
 export default JobPostings;
