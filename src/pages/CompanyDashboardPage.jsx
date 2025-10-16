@@ -820,8 +820,6 @@ function CompanyDashboardPage() {
     );
   }
 
-  // ... (rest of the render functions remain the same, just remove renderApplicantsTable)
-
   const renderResumeParser = () => (
     <div className="space-y-6">
       {/* Upload Section */}
