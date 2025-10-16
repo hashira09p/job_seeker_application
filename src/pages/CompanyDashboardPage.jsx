@@ -874,7 +874,7 @@ function CompanyDashboardPage() {
                   <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: ${uploadProgress}% }}
+                      style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
                 </div>
