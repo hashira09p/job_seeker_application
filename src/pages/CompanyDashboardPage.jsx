@@ -820,27 +820,520 @@ function CompanyDashboardPage() {
     );
   }
 
-  // ... (rest of the render functions remain the same, just remove renderApplicantsTable)
-
   const renderResumeParser = () => (
-    // ... (same as before)
-    <div>Resume Parser Content</div>
+    <div className="space-y-6">
+      {/* Upload Section */}
+      <Card className="shadow-lg border-0">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
+            Resume Parser
+          </CardTitle>
+          <CardDescription>
+            Upload a resume to extract skills, experience, and qualifications
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!uploadedFile ? (
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
+              <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Upload className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Choose a resume file to parse
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                Drag and drop your resume here, or click to browse files
+              </p>
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="resume-parser-upload"
+              />
+              <Button asChild>
+                <label htmlFor="resume-parser-upload" className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose File
+                </label>
+              </Button>
+              <p className="text-sm text-muted-foreground mt-4">
+                Supported formats: PDF, DOC, DOCX (Max 10MB)
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Upload Progress */}
+              {isUploading && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Uploading...</span>
+                    <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: ${uploadProgress}% }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* File Info */}
+              {uploadedFile && !isUploading && (
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{uploadedFile.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={removeFile}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Analysis Status */}
+              {isAnalyzing && (
+                <div className="text-center py-8">
+                  <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Analyzing Resume
+                  </h3>
+                  <p className="text-muted-foreground">
+                   Extracting skills and experience from the resume...
+                  </p>
+                </div>
+              )}
+
+              {/* Analysis Complete */}
+              {analysisComplete && (
+                <div className="text-center py-8">
+                  <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Analysis Complete!
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Successfully extracted {extractedSkills.length} skills and parsed resume data.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Extracted Skills */}
+      {extractedSkills.length > 0 && (
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Extracted Skills
+            </CardTitle>
+            <CardDescription>
+              Skills and technologies identified from the resume
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {extractedSkills.map((skill, index) => (
+                <Badge key={index} variant="secondary" className="text-sm">
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Parsed Data */}
+      {parsedData && (
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-primary" />
+              Parsed Resume Data
+            </CardTitle>
+            <CardDescription>
+              Complete information extracted from the resume
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Name:</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{parsedData.name}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Email:</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{parsedData.email}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Phone:</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{parsedData.phone}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Experience:</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{parsedData.experience}</p>
+                </div>
+              </div>
+
+              {/* Education */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Education:</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{parsedData.education}</p>
+              </div>
+
+              {/* Summary */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Professional Summary:</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{parsedData.summary}</p>
+              </div>
+
+              {/* Work Experience */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Work Experience:</span>
+                </div>
+                <div className="space-y-3">
+                  {parsedData.workExperience.map((job, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{job.position}</h4>
+                        <span className="text-xs text-muted-foreground">{job.duration}</span>
+                      </div>
+                      <p className="text-sm font-medium text-primary mb-1">{job.company}</p>
+                      <p className="text-sm text-muted-foreground">{job.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 
-  const renderCreateJobPosting = () => (
-    // ... (same as before)
-    <div>Create Job Posting Form</div>
-  )
+  const renderCreateJobPosting = () => {
+    return (
+      <form className="space-y-6 p-4 max-w-lg mx-auto" onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Title</label>
+          <input
+            type="text"
+            name="title"
+            placeholder="e.g. Software Engineer"
+            required
+            onChange={handleChange}
+            value={createJobPosting.title}
+            className="w-full border rounded p-2"
+          />
+        </div>
+ 
+        <div>
+          <label className="block text-sm font-medium mb-2">Description</label>
+          <Textarea
+            name="description"
+            placeholder="Write job description here..."
+            required
+            onChange={handleChange}
+            value={createJobPosting.description}
+            className="w-full border rounded p-2"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Location</label>
+          <input
+            type="text"
+            name="location"
+            onChange={handleChange}
+            value={createJobPosting.location}
+            placeholder="e.g. Manila, Remote"
+            className="w-full border rounded p-2"
+          />
+        </div>
+  
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Type</label>
+          <select name="type" className="w-full border rounded p-2" required onChange={handleChange} value={createJobPosting.type}>
+            <option value="">Select job type</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Remote">Remote</option>
+            <option value="Contract">Contract</option>
+            <option value="Internship">Internship</option>
+            <option value="Freelance">Freelance</option>
+          </select>
+        </div>
+  
+        <div>
+          <label className="block text-sm font-medium mb-2">Salary Range</label>
+          <div className="flex gap-2">
+            <div className="w-full">
+              <input
+                type="number"
+                name="salaryMin"
+                placeholder="₱30,000"
+                onChange={handleChange}
+                value={createJobPosting.salaryMin}
+                className={`w-full border rounded p-2 ${
+                  createJobPosting.salaryMin && createJobPosting.salaryMax && 
+                  parseInt(createJobPosting.salaryMin) > parseInt(createJobPosting.salaryMax) 
+                    ? 'border-red-500 bg-red-50' 
+                    : 'border-gray-300'
+                }`}
+                min="0"
+              />
+            </div>
+            <span className="self-center">-</span>
+            <div className="w-full">
+              <input
+                type="number"
+                name="salaryMax"
+                placeholder="₱50,000"
+                onChange={handleChange}
+                value={createJobPosting.salaryMax}
+                className={`w-full border rounded p-2 ${
+                  createJobPosting.salaryMin && createJobPosting.salaryMax && 
+                  parseInt(createJobPosting.salaryMin) > parseInt(createJobPosting.salaryMax) 
+                    ? 'border-red-500 bg-red-50' 
+                    : 'border-gray-300'
+                }`}
+                min="0"
+              />
+            </div>
+          </div>
+          
+          {createJobPosting.salaryMin && createJobPosting.salaryMax && 
+           parseInt(createJobPosting.salaryMin) > parseInt(createJobPosting.salaryMax) && (
+            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+              <AlertCircle className="h-4 w-4" />
+              Minimum salary cannot be higher than maximum salary
+            </p>
+          )}
+          
+          {createJobPosting.salaryMin && createJobPosting.salaryMax && 
+           parseInt(createJobPosting.salaryMin) <= parseInt(createJobPosting.salaryMax) && (
+            <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
+              <CheckCircle className="h-4 w-4" />
+              Valid salary range
+            </p>
+          )}
+        </div>
+
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
+          Post Job
+        </button>
+      </form>
+    )
+  }
 
   const renderSettingsView = () => (
-    // ... (same as before)
-    <div>Settings Content</div>
+    <Card className="shadow-lg border-0">
+      <CardHeader>
+        <CardTitle>Company Settings</CardTitle>
+        <CardDescription>Configure your company profile and hiring preferences</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-12">
+          <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Company Settings</h3>
+          <p className="text-muted-foreground">Settings panel will be implemented here</p>
+        </div>
+      </CardContent>
+    </Card>
   )
 
   const renderEditJobForm = () => {
-    // ... (same as before)
-    return null;
-  }
+  if (!editingJob) return null;
+
+  return (
+    <Drawer open={isEditJobOpen} onOpenChange={setIsEditJobOpen}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-2xl">
+          <DrawerHeader>
+            <DrawerTitle>Edit Job Posting</DrawerTitle>
+            <DrawerDescription>
+              Update the job posting details
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="p-6">
+            <form className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Title</label>
+                  <Input
+                    value={editingJob.title || ''}
+                    onChange={(e) => setEditingJob({...editingJob, title: e.target.value})}
+                    placeholder="e.g. Software Engineer"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Location</label>
+                  <Input
+                    value={editingJob.location || ''}
+                    onChange={(e) => setEditingJob({...editingJob, location: e.target.value})}
+                    placeholder="e.g. Manila, Remote"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Job Type</label>
+                  <Select 
+                    value={editingJob.type || ''}
+                    onValueChange={(value) => setEditingJob({...editingJob, type: value})}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select job type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full-time">Full-time</SelectItem>
+                      <SelectItem value="Part-time">Part-time</SelectItem>
+                      <SelectItem value="Remote">Remote</SelectItem>
+                      <SelectItem value="Contract">Contract</SelectItem>
+                      <SelectItem value="Internship">Internship</SelectItem>
+                      <SelectItem value="Freelance">Freelance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Status</label>
+                  <Select 
+                    value={editingJob.status || 'active'}
+                    onValueChange={(value) => setEditingJob({...editingJob, status: value})}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Minimum Salary</label>
+                  <Input
+                    type="number"
+                    value={editingJob.salaryMin || ''}
+                    onChange={(e) => setEditingJob({...editingJob, salaryMin: e.target.value})}
+                    placeholder="₱30,000"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Maximum Salary</label>
+                  <Input
+                    type="number"
+                    value={editingJob.salaryMax || ''}
+                    onChange={(e) => setEditingJob({...editingJob, salaryMax: e.target.value})}
+                    placeholder="₱50,000"
+                    required
+                  />
+                </div>
+              </div>
+
+              {editingJob.salaryMin && editingJob.salaryMax && 
+               parseInt(editingJob.salaryMin) > parseInt(editingJob.salaryMax) && (
+                <p className="text-red-500 text-sm flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  Minimum salary cannot be higher than maximum salary
+                </p>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Job Description</label>
+                <Textarea
+                  value={editingJob.description || ''}
+                  onChange={(e) => setEditingJob({...editingJob, description: e.target.value})}
+                  placeholder="Describe the job responsibilities and requirements..."
+                  rows={6}
+                />
+              </div>
+            </form>
+          </div>
+          <DrawerFooter>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => handleUpdateJob(editingJob)}
+                disabled={editingJob.salaryMin && editingJob.salaryMax && 
+                         parseInt(editingJob.salaryMin) > parseInt(editingJob.salaryMax)}
+                className="flex-1 hover:bg-[#1c1c1c] transition-colors"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Update Job
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditJobOpen(false);
+                  setEditingJob(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+};
 
   return (
     <SidebarProvider>
