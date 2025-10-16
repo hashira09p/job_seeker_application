@@ -108,7 +108,7 @@ function SignupPage() {
                     value={formData.role}
                   >
                     <option value="">Select a role</option>
-                    <option value="User">User</option>
+                    <option value="JobSeeker">Job Seeker</option>
                     <option value="Employer">Employer</option>
 
                   </select>
@@ -124,7 +124,7 @@ function SignupPage() {
             </div>
           </div>
         </div>
-      ) : role == "User" ? (
+      ) : role == "JobSeeker" ? (
         <div className="flex items-center justify-center px-4 py-16">
           <div className="w-full max-w-md">
             <div className="bg-card rounded-lg shadow-xl p-8 border relative">
@@ -479,7 +479,7 @@ function SignupPage() {
                     htmlFor="arrangement"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Role
+                    Arrangement
                   </label>
                   <select
                     id="arrangement"

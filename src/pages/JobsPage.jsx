@@ -6,7 +6,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, Briefcase, Filter, Star, Building2, Clock, DollarSign, ArrowRight, Mail, Phone, Users, Calendar, FileText, Award, Heart, Share2, GripHorizontal, Maximize2, Minimize2, ChevronUp, ChevronLeft, ChevronRight, Upload, X, File, User, MailIcon
 } from 'lucide-react';
@@ -35,6 +35,7 @@ function JobsPage() {
   const searchTimeoutRef = useRef(null);
   const locationTimeoutRef = useRef(null);
   const URL = "http://localhost:3000";
+  const navigate = useNavigate();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,7 +44,6 @@ function JobsPage() {
 
   // Application state
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
-  const [resumeFile, setResumeFile] = useState(null);
   const [applicationForm, setApplicationForm] = useState({
     fullName: "",
     email: "",
@@ -95,6 +95,12 @@ function JobsPage() {
     { value: "salary-high", label: "Highest Salary" },
     { value: "salary-low", label: "Lowest Salary" }
   ];
+
+  // Check if user is logged in
+  const isUserLoggedIn = () => {
+    const token = localStorage.getItem("token");
+    return !!token; // Returns true if token exists, false otherwise
+  };
 
   useEffect(() => {
     loadAllJobs();
@@ -320,31 +326,14 @@ function JobsPage() {
 
   // Application functions
   const handleApplyNow = () => {
-    setIsApplyDialogOpen(true);
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Check file type
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('Please upload a PDF or Word document');
-        return;
-      }
-      
-      // Check file size (50MB limit)
-      if (file.size > 50 * 1024 * 1024) {
-        alert('File size must be less than 50MB');
-        return;
-      }
-      
-      setResumeFile(file);
+    // Check if user is logged in
+    if (!isUserLoggedIn()) {
+      alert('Please log in or register first to apply for jobs.');
+      navigate('/login'); // Redirect to login page
+      return;
     }
-  };
-
-  const handleRemoveFile = () => {
-    setResumeFile(null);
+    
+    setIsApplyDialogOpen(true);
   };
 
   const handleInputChange = (field, value) => {
@@ -355,6 +344,13 @@ function JobsPage() {
   };
 
   const handleSubmitApplication = async () => {
+    // Check if user is logged in (double check)
+    if (!isUserLoggedIn()) {
+      alert('Please log in or register first to apply for jobs.');
+      navigate('/login');
+      return;
+    }
+
     // Basic validation
     if (!applicationForm.fullName.trim()) {
       alert('Please enter your full name');
@@ -365,30 +361,24 @@ function JobsPage() {
       alert('Please enter your email');
       return;
     }
-    
-    if (!resumeFile) {
-      alert('Please upload your resume');
-      return;
-    }
 
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append("resumeFile", resumeFile);
-      formData.append("fullName", applicationForm.fullName);
-      formData.append("email", applicationForm.email);
-      formData.append("phone", applicationForm.phone);
-      formData.append("coverLetter", applicationForm.coverLetter);
-      formData.append("jobId", selectedJob?.id);
+      const applicationData = {
+        fullName: applicationForm.fullName,
+        email: applicationForm.email,
+        phone: applicationForm.phone,
+        coverLetter: applicationForm.coverLetter,
+        jobPostingID: selectedJob.id
+      };
       
       const token = localStorage.getItem("token");
 
       console.log("Submitting application...");
-      const result = await axios.post(`${URL}/application-submit`, formData, {
+      const result = await axios.post(`${URL}/application-submit`, applicationData, {
         headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          Authorization: `Bearer ${token}`
         }
       });
       
@@ -399,7 +389,6 @@ function JobsPage() {
         phone: "",
         coverLetter: ""
       });
-      setResumeFile(null);
       setIsApplyDialogOpen(false);
       
       // Show success message
@@ -407,7 +396,13 @@ function JobsPage() {
       
     } catch (error) {
       console.error('Error submitting application:', error);
-      alert('Error submitting application. Please try again.');
+      if (error.response?.status === 401) {
+        alert('Your session has expired. Please log in again.');
+        localStorage.removeItem("token");
+        navigate('/login');
+      } else {
+        alert(error.response.data.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -489,6 +484,13 @@ function JobsPage() {
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Discover thousands of job opportunities across the Philippines and connect with top employers
           </p>
+          {!isUserLoggedIn() && (
+            <div className="mt-6 p-4 bg-yellow-100 border border-yellow-300 rounded-lg max-w-2xl mx-auto">
+              <p className="text-yellow-800 font-medium">
+                🔒 Please <Link to="/login" className="underline hover:text-yellow-900">log in</Link> or <Link to="/signup" className="underline hover:text-yellow-900">register</Link> to apply for jobs
+              </p>
+            </div>
+          )}
         </div>
 
         <Card className="shadow-lg border-0 mb-16">
@@ -901,7 +903,11 @@ function JobsPage() {
                   </Card>
 
                   <div className="flex gap-4">
-                    <Button className="flex-1" onClick={handleApplyNow}>
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleApplyNow}
+                      disabled={!isUserLoggedIn()}
+                    >
                       Apply Now
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
@@ -914,6 +920,13 @@ function JobsPage() {
                       Share
                     </Button>
                   </div>
+                  {!isUserLoggedIn() && (
+                    <div className="p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+                      <p className="text-yellow-800 text-sm">
+                        🔒 You need to <Link to="/login" className="underline font-medium">log in</Link> or <Link to="/signup" className="underline font-medium">register</Link> to apply for this job
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -974,59 +987,6 @@ function JobsPage() {
               </div>
             </div>
 
-            {/* Resume Upload */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <File className="h-4 w-4" />
-                Resume Upload *
-              </h3>
-              
-              {!resumeFile ? (
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Upload your resume (PDF, DOC, DOCX)
-                  </p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Maximum file size: 50MB
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => document.getElementById('resume-upload').click()}
-                  >
-                    Choose File
-                  </Button>
-                  <input
-                    id="resume-upload"
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    name="resume"
-                  />
-                </div>
-              ) : (
-                <div className="border rounded-lg p-4 flex items-center justify-between bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <File className="h-6 w-6 text-primary" />
-                    <div>
-                      <p className="font-medium">{resumeFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(resumeFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRemoveFile}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
             {/* Cover Letter */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -1057,7 +1017,7 @@ function JobsPage() {
             </Button>
             <Button
               onClick={handleSubmitApplication}
-              disabled={isSubmitting || !resumeFile || !applicationForm.fullName || !applicationForm.email}
+              disabled={isSubmitting || !applicationForm.fullName || !applicationForm.email}
             >
               {isSubmitting ? (
                 <>

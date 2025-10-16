@@ -19,7 +19,7 @@ import path from 'path';
 
 dotenv.config()
 
-const {Users, Companies, JobPostings, Documents} = db
+const {Users, Companies, JobPostings, Documents, Applicants} = db
 const port = 3000;
 const app = express();
 const saltRounds = 15;
@@ -56,15 +56,15 @@ app.use(cors({
 }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
-async function authenticate(){
-  try{
-    await sequelize.authenticate()
-    await sequelize.sync({ force: false })
-    console.log("Database connected and synced")
-  }catch(err){
-    console.log(err.message);
-  }
-}
+// async function authenticate(){
+//   try{
+//     await sequelize.authenticate()
+//     await sequelize.sync({ force: false })
+//     console.log("Database connected and synced")
+//   }catch(err){
+//     console.log(err.message);
+//   }
+// }
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -79,7 +79,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-authenticate();
+// authenticate();
 
 app.get("/auth/google",
   passport.authenticate("google",
@@ -198,41 +198,99 @@ app.post("/submit-login", async(req, res) => {
 
 //Employer
 //Company Page for Employer
-app.get("/companyDashboard", authenticateToken, async(req, res) => {
-  const user = await Users.findOne({
-    where: {
-      id: req.user.id
-    }
-  })
+app.get("/companyDashboard", authenticateToken, async (req, res) => {
+  console.log(req.user.id, "hello")
+  try {
+    const user = await Users.findOne({
+      where: { id: req.user.id }
+    });
 
-  if(user.role == "User"){
-    res.status(200).json({role:user.role})
-    return;
+    if (user.role == "User") {
+      res.status(200).json({ role: user.role });
+      return;
+    }
+
+    const companies = await Companies.findOne({
+      where: { userID: req.user.id },
+      include: {
+        model: Users,
+        as: "user",
+        attributes: ["fullName"],
+      }
+    });
+
+    const jobPostings = await JobPostings.findAll({
+      where: { companyID: companies.id },
+      include: [{
+        model: Applicants,
+        as: "applicants",
+        attributes: ["id"]
+      }]
+    });
+
+    const formattedJobPostings = jobPostings.map(job => ({
+      id: job.id,
+      title: job.title,
+      description: job.description,
+      location: job.location,
+      type: job.type,
+      status: job.status,
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
+      createdAt: job.createdAt,
+      applicants: job.applicants ? job.applicants : []
+    }));
+
+    res.status(200).json({
+      company: companies.name,
+      fullName: user.fullName,
+      jobPostings: formattedJobPostings
+    });
+  } catch (err) {
+    console.log(err.message);
+    res.status(400).json({ message: err.message });
   }
-
-  const companies = await Companies.findOne({ 
-    where:{
-      userID: req.user.id,
-    },
-    include: {
-      model: Users,
-      as: "user"
-    }
-  })
-
-  const jobPostings = await JobPostings.findAll({
-    where:{
-      companyID: companies.id
-    }
-  })
-
-  res.json({ message: "Welcome to dashboard!", user: req.user, company: companies["name"], fullName: companies.user.fullName, companyID: companies.id, jobPostings})
 });
 
-app.post("/jobPostingSubmit", async(req,res) => {
-  const {title, description, location, jobType, salaryMin, salaryMax, companyID} = req.body
+app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
+  const JobPostingId = req.params.id
 
-  console.log(title, description, location, jobType, salaryMin, salaryMax, companyID)
+  try{
+    const applicants = await Applicants.findAll({
+      where: {
+        JobPostingId: JobPostingId // Match your model's field name
+      },
+      include: [
+        {
+          model: Users,
+           attributes: ['id', 'email'] // Only return specific fields
+        },
+        {
+          model: Documents,
+          attributes: ['id', 'fileName']
+        }
+      ]
+    });
+
+    res.status(200).json({
+      message:"OK",
+      applicants: applicants
+    })
+  }catch(error){
+    console.log(error.message)
+  }
+})
+
+app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
+  const {title, description, location, jobType, salaryMin, salaryMax} = req.body
+
+  console.log(title, description, location, jobType, salaryMin, salaryMax)
+
+  const company = await Companies.findOne({
+    where:{
+      userID: req.user.id
+    }
+  })
   
   try{
     const result = await JobPostings.create({
@@ -240,7 +298,7 @@ app.post("/jobPostingSubmit", async(req,res) => {
       description: description,
       location: location,
       type: jobType,
-      companyID: companyID,
+      companyID: company.id,
       salaryMin: salaryMin,
       salaryMax: salaryMax,
       status: "active"
@@ -349,7 +407,6 @@ app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(r
 
 //getting the resume from backend
 app.get("/getResume", authenticateToken, async(req, res) => {
-  console.log("hello")
   try{
     const result = await Documents.findOne({
       where:{
@@ -397,16 +454,40 @@ app.get("/downloadResume", authenticateToken, async(req, res) => {
 });
 
 //Passing application for User side
-app.post("/application-submit", authenticateToken, (req, res) => {
-  console.log(req.user.id.document)
+app.post("/application-submit", authenticateToken, async(req, res) => {
+  const {fullName, email, phone, coverLetter, jobPostingID} = req.body
+  const userID = req.user.id
+
+  console.log(jobPostingID)
+  
+
+  try{
+    const document = await Documents.findOne({
+      where:{
+      userID: req.user.id 
+      }
+    })
+
+    const documentID = document.id
+
+    const result = await Applicants.create({
+      name: fullName,
+      email: email,
+      coverLetter: coverLetter,
+      phone: phone,
+      userID: userID,
+      documentID: documentID,
+      JobPostingId: jobPostingID
+    })
+
+    console.log(result)
+
+    res.status(200).json({message: "OK"})
+  }catch(err){
+    console.log(err.message)
+    res.status(400).json({message: "Upload your resume first in upload page"})
+  }
 })
-
-// app.post("/resume-submit", authenticateToken,  
-//   upload.single("resumeFile"),  (req, res) => {
-//   console.log(req.file)
-//   console.log(req.user)
-
-// } )
 
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -468,8 +549,6 @@ passport.deserializeUser(async(id, done) => {
     console.log(err.message)
   }
 })
-
-
 
 app.listen(port, () => {
   console.log(`Server is running in port ${port}`)

@@ -9,7 +9,7 @@ Companies.init({
     industry: DataTypes.STRING,
     website: DataTypes.STRING,
     userID: DataTypes.INTEGER,
-    arrangement: DataTypes.INTEGER
+    arrangement: DataTypes.STRING
 },{
     sequelize,
     modelName: 'Companies',

@@ -17,8 +17,15 @@ Users.init({
 })
 
 Users.associate = (models) => {
-    Users.hasOne(models.Companies,{foreignKey: "userID", as: "company"})
-    Users.hasOne(models.Documents,{foreignKey: "userID", as:"document"})
+    Users.hasOne(models.Companies,{foreignKey: "userID", as: "company"});
+
+    Users.hasOne(models.Documents,{foreignKey: "userID", as:"document"});
+
+    Users.belongsToMany(models.JobPostings,{
+        through: "Applicants",
+        foreignKey: "userID",
+        as: "appliedJobs"
+    })
 }
 
 export default Users;

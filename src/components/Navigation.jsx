@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from "@/components/ui/button"
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import logoImage from '@/assets/logo.png'
 import {
   NavigationMenu,
@@ -13,12 +13,55 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import { cn } from "@/lib/utils"
+import { LogOut, User } from 'lucide-react'
 
 function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [userName, setUserName] = useState('')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  // Check if user is logged in and get user info
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    const userData = localStorage.getItem("userData")
+    
+    if (token) {
+      setIsLoggedIn(true)
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          setUserName(user.name || user.email || 'User')
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          setUserName('User')
+        }
+      } else {
+        setUserName('User')
+      }
+    } else {
+      setIsLoggedIn(false)
+      setUserName('')
+    }
+  }, [])
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
+  }
+
+  const handleLogout = () => {
+    // Clear all user data from localStorage
+    localStorage.removeItem("token")
+    localStorage.removeItem("userData")
+    
+    // Reset state
+    setIsLoggedIn(false)
+    setUserName('')
+    
+    // Close mobile menu if open
+    setIsMobileMenuOpen(false)
+    
+    // Redirect to home page
+    window.location.href = '/'
   }
 
   return (
@@ -105,17 +148,40 @@ function Navigation() {
             </NavigationMenu>
           </div>
 
+          {/* Desktop Navigation - Conditional rendering based on login status */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/login">
-              <Button variant="ghost" className="text-muted-foreground hover:text-primary hover:bg-primary/5">
-                Login
-              </Button>
-            </Link>
-            <Link to="/signup">
-              <Button>
-                Sign Up
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 bg-primary/10 px-3 py-2 rounded-lg">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">
+                    {userName}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary hover:bg-primary/5">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button>
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="md:hidden">
@@ -193,17 +259,39 @@ function Navigation() {
                 </div>
               </div>
 
+              {/* Mobile Navigation - Conditional rendering based on login status */}
               <div className="pt-4 border-t border-border space-y-3">
-                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button className="w-full">
-                    Sign Up
-                  </Button>
-                </Link>
+                {isLoggedIn ? (
+                  <>
+                    <div className="flex items-center space-x-2 bg-primary/10 px-3 py-2 rounded-lg mb-3">
+                      <User className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">
+                        {userName}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="ghost" className="w-full text-muted-foreground hover:text-primary hover:bg-primary/5">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full">
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

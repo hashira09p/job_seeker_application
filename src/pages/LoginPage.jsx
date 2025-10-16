@@ -38,7 +38,7 @@ function LoginPage() {
       });
 
       const data = result.data
-      if(data.role == "User"){
+      if(data.role == "JobSeeker"){
         localStorage.setItem("token", data.token);
         console.log(data)
         alert("Login Success")
