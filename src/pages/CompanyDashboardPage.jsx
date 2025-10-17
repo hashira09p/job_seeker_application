@@ -372,63 +372,61 @@ function CompanyDashboardPage() {
   ];
 
   // Column definitions for applicants table
-  const applicantsColumns = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div>,
-    },
-    {
-      accessorKey: "position",
-      header: "Position",
-    },
-    {
-      accessorKey: "experience",
-      header: "Experience",
-      cell: ({ row }) => <div>{row.getValue("experience") || 'Not specified'}</div>,
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status")
-        return (
-          <div className="flex items-center gap-2">
-            {getStatusIcon(status)}
-            {getStatusBadge(status)}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "appliedDate",
-      header: "Applied Date",
-      cell: ({ row }) => <div>{row.getValue("appliedDate") || 'Not specified'}</div>,
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
+const applicantsColumns = [
+  {
+    accessorKey: "name",
+    header: "Name",
+    cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div>,
+  },
+  {
+    accessorKey: "position",
+    header: "Position",
+  },
+  {
+    accessorKey: "email",
+    header: "Email",
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const status = row.getValue("status")
+      return (
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0"
-            onClick={() => handleApplicantClick(row.original)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Download className="h-4 w-4" />
-          </Button>
+          {getStatusIcon(status)}
+          {getStatusBadge(status)}
         </div>
-      ),
+      )
     },
-  ];
+  },
+  {
+    accessorKey: "createdAt", // This maps to the createdAt field from database
+    header: "Applied Date",
+    cell: ({ row }) => {
+      const createdAt = row.getValue("createdAt");
+      return <div>{createdAt ? new Date(createdAt).toLocaleDateString() : 'Not specified'}</div>;
+    },
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0"
+          onClick={() => handleApplicantClick(row.original)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
+    ),
+  },
+];
 
   // Handler functions
   const handleEditJobClick = (job) => {
