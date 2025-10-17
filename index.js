@@ -282,9 +282,9 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
 })
 
 app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
-  const {title, description, location, jobType, salaryMin, salaryMax} = req.body
+  const {title, description, location, type, salaryMin, salaryMax} = req.body
 
-  console.log(title, description, location, jobType, salaryMin, salaryMax)
+  console.log(title, description, location, type, salaryMin, salaryMax)
 
   const company = await Companies.findOne({
     where:{
@@ -297,7 +297,7 @@ app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
       title: title,
       description: description,
       location: location,
-      type: jobType,
+      type: type,
       companyID: company.id,
       salaryMin: salaryMin,
       salaryMax: salaryMax,
