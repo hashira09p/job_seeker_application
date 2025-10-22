@@ -769,7 +769,6 @@ const applicantsColumns = [
           data={jobPostings}
           searchKey="title"
           searchPlaceholder="Search job postings..."
-          onRowClick={(job) => handleViewJobApplicants(job)}
         />
       </CardContent>
     </Card>
