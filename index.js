@@ -284,7 +284,7 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
 app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
   const {title, description, location, type, salaryMin, salaryMax} = req.body
 
-  console.log(title, description, location, type, salaryMin, salaryMax)
+  // console.log(title, description, location, type, salaryMin, salaryMax)
 
   const company = await Companies.findOne({
     where:{
@@ -304,7 +304,7 @@ app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
       status: "active"
     })
 
-    console.log(result)
+    // console.log(result)
     res.status(200).json({message:"OK", job:result})
   }catch(err){
     console.log(err.message)
@@ -385,8 +385,6 @@ app.get("/jobs", async(req, res) => {
 
 //Saving the resume to backend
 app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(req, res) => {
-  console.log("Hello")
-  console.log(req.file)
   const {filename, destination} = req.file
   
   try{
@@ -405,7 +403,7 @@ app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(r
   }
 })
 
-//getting the resume from backend
+//getting the resume from lcoalStorage and delete the file directory from database
 app.get("/getResume", authenticateToken, async(req, res) => {
   try{
     const result = await Documents.findOne({
@@ -413,12 +411,13 @@ app.get("/getResume", authenticateToken, async(req, res) => {
         userID: req.user.id
       }
     })
-    res.status(200).json({message: "Saved Success", resumePath: result.fileDir})
+    res.status(200).json({message: "Saved Success", resumePath: result.fileDir, resumeId: result.id})
   }catch(err){
     console.log(err.message)
   }
 })
 
+//Download Resume from localstorage and delete the file directory from database
 app.get("/downloadResume", authenticateToken, async(req, res) => {
   try {
     const result = await Documents.findOne({
@@ -453,6 +452,25 @@ app.get("/downloadResume", authenticateToken, async(req, res) => {
   }
 });
 
+app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
+  const documentId = req.params.id;
+  
+  try{
+    const document = await Documents.findByPk(documentId)
+
+    const filePath = document.fileDir
+
+    if(fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await document.destroy();
+
+    res.status(200).json({message: "Ok"})
+  }catch(err){
+    console.log(err.message)
+    res.status(400).json({message: "The resume is already been deleted."})
+  }
+})
+
 //Passing application for User side
 app.post("/application-submit", authenticateToken, async(req, res) => {
   const {fullName, email, phone, coverLetter, jobPostingID} = req.body
@@ -460,7 +478,6 @@ app.post("/application-submit", authenticateToken, async(req, res) => {
 
   console.log(jobPostingID)
   
-
   try{
     const document = await Documents.findOne({
       where:{
@@ -488,6 +505,8 @@ app.post("/application-submit", authenticateToken, async(req, res) => {
     res.status(400).json({message: "Upload your resume first in upload page"})
   }
 })
+
+
 
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,

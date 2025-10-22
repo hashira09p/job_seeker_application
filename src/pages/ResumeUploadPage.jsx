@@ -98,6 +98,7 @@ function ResumeUploadPage() {
         console.log(cleanedPath)
         setStoredResume({
           resumePath: cleanedPath,
+          id: response.data.resumeId,
           uploadedAt: new Date().toISOString()
         })
         setAnalysisComplete(true)
@@ -189,6 +190,9 @@ function ResumeUploadPage() {
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           setUploadProgress(progress)
+          setTimeout(function(){
+            location.reload();
+          },2000)
         }
       })
 
@@ -228,9 +232,11 @@ function ResumeUploadPage() {
       return;
     }
 
+    const resumeId = storedResume.id
+
     try {
       const token = localStorage.getItem("token")
-      await axios.delete(`${URL}/deleteResume`, {
+      await axios.delete(`${URL}/deleteResume/${resumeId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -255,7 +261,7 @@ function ResumeUploadPage() {
         localStorage.removeItem("token");
         navigate('/login');
       } else {
-        setUploadError("Failed to delete resume")
+        setUploadError(error.response.data.message)
       }
     }
   }
