@@ -294,7 +294,7 @@ function ResumeUploadPage() {
     return cleanedPath.split('/').pop() || cleanedPath.split('\\').pop() || cleanedPath;
   }
 
-  // Download the file using the resumePath from backend
+  // Download the file using the resumePath from backend - Supports both PDF and DOCX
   const handleDownload = async () => {
     // Check if user is logged in
     if (!isUserLoggedIn()) {
@@ -319,17 +319,9 @@ function ResumeUploadPage() {
         responseType: 'blob' // Important for file downloads
       });
 
-      // Create blob from response
-      const blob = new Blob([response.data]);
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create download link
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Get filename from response headers or use default
+      // Get filename from Content-Disposition header or generate one
       const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'resume.pdf';
+      let fileName = 'resume';
       
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
@@ -337,8 +329,29 @@ function ResumeUploadPage() {
           fileName = fileNameMatch[1];
         }
       }
+
+      // Get content type to determine file extension if not in filename
+      const contentType = response.headers['content-type'];
+      if (!fileName.includes('.') && contentType) {
+        if (contentType.includes('pdf')) {
+          fileName += '.pdf';
+        } else if (contentType.includes('word') || contentType.includes('docx')) {
+          fileName += '.docx';
+        } else if (contentType.includes('msword')) {
+          fileName += '.doc';
+        }
+      }
+
+      // Create blob from response with proper content type
+      const blob = new Blob([response.data], { 
+        type: contentType || 'application/octet-stream'
+      });
+      const url = window.URL.createObjectURL(blob);
       
-      link.setAttribute('download', fileName);
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -346,12 +359,18 @@ function ResumeUploadPage() {
       // Clean up
       window.URL.revokeObjectURL(url);
       
+      console.log('Resume downloaded successfully:', fileName);
+      
     } catch (error) {
       console.error('Download error:', error);
       if (error.response?.status === 401) {
         alert('Your session has expired. Please log in again.');
         localStorage.removeItem("token");
         navigate('/login');
+      } else if (error.response?.status === 404) {
+        setUploadError('Resume file not found on server.');
+      } else if (error.response?.status === 500) {
+        setUploadError('Server error while downloading resume. Please try again.');
       } else {
         setUploadError(`Download failed: ${error.message}`);
       }

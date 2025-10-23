@@ -176,6 +176,89 @@ function CompanyDashboardPage() {
     }
   };
 
+  // Download the Applicants Resume - Supports both PDF and DOCX
+  const handleDownloadResume = async (applicant) => {
+    const token = localStorage.getItem("token");
+    
+    // Make sure we have the document ID from the applicant data
+    const applicantDocumentId = applicant.Document?.id;
+    
+    if (!applicantDocumentId) {
+      console.error('No document ID found for applicant:', applicant);
+      alert('Resume document not found for this applicant');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${URL}/applicants/${applicantDocumentId}/resume`, {
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        },
+        responseType: 'blob' // Important for file downloads
+      });
+
+      // Get filename from Content-Disposition header or generate one
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = `${applicant.name.replace(/\s+/g, '_')}_resume`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          fileName = filenameMatch[1];
+        }
+      }
+
+      // Get content type to determine file extension if not in filename
+      const contentType = response.headers['content-type'];
+      if (!fileName.includes('.') && contentType) {
+        if (contentType.includes('pdf')) {
+          fileName += '.pdf';
+        } else if (contentType.includes('word') || contentType.includes('docx')) {
+          fileName += '.docx';
+        } else if (contentType.includes('msword')) {
+          fileName += '.doc';
+        }
+      }
+
+      // Create a blob from the response data
+      const blob = new Blob([response.data], { 
+        type: contentType || 'application/octet-stream'
+      });
+    
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+    
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+    
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+    
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    
+      console.log('Resume downloaded successfully:', fileName);
+    
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+    
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        alert(`Resume not found for ${applicant.name}`);
+      } else if (error.response?.status === 500) {
+        alert('Server error while downloading resume. Please try again.');
+      } else if (error.response?.status === 401) {
+        alert('Authentication failed. Please log in again.');
+      } else {
+        alert('Error downloading resume. Please try again.');
+      }
+    }
+  };
+
   // Calculate statistics based on real data
   const stats = {
     totalJobs: jobPostings.length,
@@ -400,7 +483,7 @@ const applicantsColumns = [
     },
   },
   {
-    accessorKey: "createdAt", // This maps to the createdAt field from database
+    accessorKey: "createdAt",
     header: "Applied Date",
     cell: ({ row }) => {
       const createdAt = row.getValue("createdAt");
@@ -420,7 +503,14 @@ const applicantsColumns = [
         >
           <Eye className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0"
+          onClick={() => handleDownloadResume(row.original)}
+          title="Download Resume"
+          disabled={!row.original.Document?.id}
+        >
           <Download className="h-4 w-4" />
         </Button>
       </div>
@@ -769,6 +859,7 @@ const applicantsColumns = [
           data={jobPostings}
           searchKey="title"
           searchPlaceholder="Search job postings..."
+          onRowClick={(job) => handleViewJobApplicants(job)}
         />
       </CardContent>
     </Card>
@@ -1304,28 +1395,37 @@ const applicantsColumns = [
             </form>
           </div>
           <DrawerFooter>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => handleUpdateJob(editingJob)}
-                disabled={editingJob.salaryMin && editingJob.salaryMax && 
-                         parseInt(editingJob.salaryMin) > parseInt(editingJob.salaryMax)}
-                className="flex-1 hover:bg-[#1c1c1c] transition-colors"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Update Job
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsEditJobOpen(false);
-                  setEditingJob(null);
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </DrawerFooter>
+  <div className="flex gap-2">
+    <Button className="flex-1 hover:bg-[#1c1c1c] transition-colors">
+      <MessageSquare className="h-4 w-4 mr-2" />
+      Schedule Interview
+    </Button>
+    <Button variant="outline" className="flex-1 hover:bg-green-600 hover:text-white transition-colors">
+      <UserCheck className="h-4 w-4 mr-2" />
+      Shortlist
+    </Button>
+    <Button variant="outline" className="flex-1 hover:bg-red-600 hover:text-white transition-colors">
+      <UserX className="h-4 w-4 mr-2" />
+      Reject
+    </Button>
+  </div>
+  <div className="flex gap-2">
+    <Button 
+      variant="outline" 
+      className="flex-1 hover:bg-[#1c1c1c] hover:text-white transition-colors"
+      onClick={() => selectedApplicant && handleDownloadResume(selectedApplicant)}
+      disabled={!selectedApplicant?.Document?.id}
+    >
+      <Download className="h-4 w-4 mr-2" />
+      Download Resume
+    </Button>
+  </div>
+  <DrawerClose asChild>
+    <Button variant="outline" className="w-full hover:bg-[#1c1c1c] hover:text-white transition-colors">
+      Close
+    </Button>
+  </DrawerClose>
+</DrawerFooter>
         </div>
       </DrawerContent>
     </Drawer>
@@ -1546,7 +1646,12 @@ const applicantsColumns = [
                   </Button>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 hover:bg-[#1c1c1c] hover:text-white transition-colors">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 hover:bg-[#1c1c1c] hover:text-white transition-colors"
+                    onClick={() => selectedApplicant && handleDownloadResume(selectedApplicant)}
+                    disabled={!selectedApplicant?.Document?.id}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download Resume
                   </Button>

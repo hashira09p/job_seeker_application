@@ -403,7 +403,7 @@ app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(r
   }
 })
 
-//getting the resume from lcoalStorage and delete the file directory from database
+//getting the resume from lcoalStorage 
 app.get("/getResume", authenticateToken, async(req, res) => {
   try{
     const result = await Documents.findOne({
@@ -437,10 +437,74 @@ app.get("/downloadResume", authenticateToken, async(req, res) => {
       return res.status(404).json({ message: "File not found on server" });
     }
 
-    // Set proper headers for file download
+    // Get file extension and set appropriate Content-Type
+    const fileExtension = path.extname(filePath).toLowerCase();
     const fileName = path.basename(filePath);
+    
+    let contentType = 'application/octet-stream'; // Default fallback
+    
+    if (fileExtension === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (fileExtension === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (fileExtension === '.doc') {
+      contentType = 'application/msword';
+    }
+
+    // Set proper headers for file download
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Type', contentType);
+
+    // Stream the file to the response
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+  } catch(err) {
+    console.log(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//Download the resume in the applicants. This is employer side.
+app.get("/applicants/:id/resume", authenticateToken, async(req, res) => {
+  const applicantDocumentId = req.params.id;
+
+  try {
+    const result = await Documents.findOne({
+      where: { id: applicantDocumentId }
+    });
+    
+    if (!result || !result.fileDir) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    // Use process.cwd() instead of __dirname
+    const filePath = path.join(process.cwd(), result.fileDir);
+
+    console.log(filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found on server" });
+    }
+
+    // Get file extension and set appropriate Content-Type
+    const fileExtension = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath);
+    
+    let contentType = 'application/octet-stream'; // Default fallback
+    
+    if (fileExtension === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (fileExtension === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (fileExtension === '.doc') {
+      contentType = 'application/msword';
+    }
+
+    // Set proper headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', contentType);
 
     // Stream the file to the response
     const fileStream = fs.createReadStream(filePath);
