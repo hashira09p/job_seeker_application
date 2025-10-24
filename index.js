@@ -16,7 +16,6 @@ import multer from "multer"
 import fs from "fs"
 import path from 'path';
 
-
 dotenv.config()
 
 const {Users, Companies, JobPostings, Documents, Applicants} = db
@@ -260,6 +259,7 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
       where: {
         JobPostingId: JobPostingId // Match your model's field name
       },
+      attributes: ['id', 'name', 'email', 'coverLetter', 'phone', 'JobPostingId', 'userID', 'status'],
       include: [
         {
           model: Users,
@@ -278,6 +278,25 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
     })
   }catch(error){
     console.log(error.message)
+  }
+})
+
+//Update the status of applicants from Employer Side
+app.patch("/applicants/:id", authenticateToken, async(req,res) => {
+  const applicantId = req.params.id
+  const status = req.body.status
+  try{
+    const result = Applicants.update({
+      status: status
+    },{
+      where:{
+        id: applicantId
+      }
+    })
+
+    res.status(200).json({message: "Ok"})
+  }catch(err){
+    res.status(400).json({message: err.message})
   }
 })
 
@@ -324,13 +343,13 @@ app.patch("/jobPostings/:id", authenticateToken, async(req,res) => {
       type: type,
       status: status,
       salaryMin: salaryMin,
-      salaryMax:salaryMax,},
-      
-      {
-        where:{
+      salaryMax:salaryMax,
+    },
+    {
+      where:{
         id: jobPostingID
       }
-      })
+    })
 
     res.status(200).json({message:"OK"})
   }catch(err){
@@ -406,12 +425,14 @@ app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(r
 //getting the resume from lcoalStorage 
 app.get("/getResume", authenticateToken, async(req, res) => {
   try{
-    const result = await Documents.findOne({
+    const documents = await Documents.findAll({
       where:{
         userID: req.user.id
       }
     })
-    res.status(200).json({message: "Saved Success", resumePath: result.fileDir, resumeId: result.id})
+
+    console.log(documents)
+    res.status(200).json({message: "Saved Success", documents: documents})
   }catch(err){
     console.log(err.message)
   }
@@ -466,7 +487,7 @@ app.get("/downloadResume", authenticateToken, async(req, res) => {
 });
 
 //Download the resume in the applicants. This is employer side.
-app.get("/applicants/:id/resume", authenticateToken, async(req, res) => {
+app.get("/applicants/resume/:id", authenticateToken, async(req, res) => {
   const applicantDocumentId = req.params.id;
 
   try {
@@ -520,18 +541,19 @@ app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
   const documentId = req.params.id;
   
   try{
-    const document = await Documents.findByPk(documentId)
-
-    const filePath = document.fileDir
-
-    if(fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-    await document.destroy();
+    const document = await Documents.update({
+      deletedAt: Date.now()
+    },
+  {
+    where:{
+      id: documentId
+    }
+  })
 
     res.status(200).json({message: "Ok"})
   }catch(err){
     console.log(err.message)
-    res.status(400).json({message: "The resume is already been deleted."})
+    res.status(400).json({message: err.message})
   }
 })
 

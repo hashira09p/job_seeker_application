@@ -17,7 +17,9 @@ import {
   Users,
   Award,
   LogIn,
-  Info
+  Info,
+  Plus,
+  File
 } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
@@ -28,10 +30,9 @@ function ResumeUploadPage() {
   const [uploadedFile, setUploadedFile] = React.useState(null)
   const [isUploading, setIsUploading] = React.useState(false)
   const [uploadProgress, setUploadProgress] = React.useState(0)
-  const [analysisComplete, setAnalysisComplete] = React.useState(false)
   const [uploadError, setUploadError] = React.useState("")
   const [uploadSuccess, setUploadSuccess] = React.useState("")
-  const [storedResume, setStoredResume] = React.useState(null)
+  const [storedDocuments, setStoredDocuments] = React.useState([])
   const URL = "http://localhost:3000"
   const navigate = useNavigate()
 
@@ -41,10 +42,10 @@ function ResumeUploadPage() {
     return !!token;
   };
 
-  // Fetch stored resume from database on component mount
+  // Fetch stored documents from database on component mount
   React.useEffect(() => {
     if (isUserLoggedIn()) {
-      fetchStoredResume();
+      fetchStoredDocuments();
     }
   }, []);
 
@@ -69,18 +70,18 @@ function ResumeUploadPage() {
     path = path.replace(/lvesumes/gi, 'resumes'); // Fix "lvesumes" to "resumes"
     path = path.replace(/V/g, ''); // Remove the stray "V"
     
-    // Ensure it starts with uploads/resumes/
-    if (!path.startsWith('uploads/resumes/')) {
+    // Ensure it starts with uploads/
+    if (!path.startsWith('uploads/')) {
       // Extract filename and rebuild path
       const fileName = path.split('/').pop() || path.split('\\').pop();
-      path = `uploads/resumes/${fileName}`;
+      path = `uploads/${fileName}`;
     }
     
     console.log("Cleaned path:", path);
     return path;
   }
 
-  const fetchStoredResume = async () => {
+  const fetchStoredDocuments = async () => {
     try {
       const token = localStorage.getItem("token")
       const response = await axios.get(`${URL}/getResume`, {
@@ -89,48 +90,58 @@ function ResumeUploadPage() {
         }
       })
 
-      console.log("Fetched resume:", response.data)
+      console.log("Fetched documents:", response.data)
       
-      // Check if resumePath exists in response
-      if (response.data && response.data.resumePath) {
-        // Clean the file path
-        const cleanedPath = cleanFilePath(response.data.resumePath);
-        console.log(cleanedPath)
-        setStoredResume({
-          resumePath: cleanedPath,
-          id: response.data.resumeId,
-          uploadedAt: new Date().toISOString()
-        })
-        setAnalysisComplete(true)
+      // Check if documents exist in response
+      if (response.data && response.data.documents) {
+        const documents = Array.isArray(response.data.documents) 
+          ? response.data.documents 
+          : [response.data.documents];
+        
+        // Filter documents where deletedAt is null (not deleted)
+        const activeDocuments = documents.filter(doc => doc.deletedAt === null);
+        
+        const formattedDocuments = activeDocuments.map(doc => ({
+          id: doc.id,
+          docType: doc.docType || 'Resume',
+          fileName: doc.fileName,
+          fileDir: cleanFilePath(doc.fileDir),
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+          deletedAt: doc.deletedAt
+        }));
+        
+        setStoredDocuments(formattedDocuments);
       }
     } catch (error) {
-      console.error('Error fetching resume:', error)
-      // It's okay if no resume exists yet
+      console.error('Error fetching documents:', error)
+      // It's okay if no documents exist yet
     }
   }
 
   const handleFileUpload = (event) => {
     // Check if user is logged in
     if (!isUserLoggedIn()) {
-      alert('Please log in or register first to upload your resume.');
+      alert('Please log in or register first to upload documents.');
       navigate('/login');
-      return;
-    }
-
-    // Check if there's already a stored resume
-    if (storedResume) {
-      setUploadError('Please delete your existing resume first before uploading a new one.');
-      // Clear the file input
-      event.target.value = '';
       return;
     }
 
     const file = event.target.files[0]
     if (file) {
-      // Check file type
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
-        setUploadError('Please upload a PDF or Word document');
+      // Check file type - Only allow PDF, DOC, and DOCX
+      const allowedTypes = [
+        'application/pdf', 
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      
+      // Also check file extension for additional validation
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const allowedExtensions = ['pdf', 'doc', 'docx'];
+      
+      if (!allowedTypes.includes(file.type) || !allowedExtensions.includes(fileExtension)) {
+        setUploadError('Please upload only PDF, DOC, or DOCX files');
         // Clear the file input
         event.target.value = '';
         return;
@@ -147,7 +158,6 @@ function ResumeUploadPage() {
       setUploadedFile(file)
       setUploadError("")
       setUploadSuccess("")
-      setAnalysisComplete(false)
     }
   }
 
@@ -156,19 +166,13 @@ function ResumeUploadPage() {
     
     // Check if user is logged in
     if (!isUserLoggedIn()) {
-      alert('Please log in or register first to upload your resume.');
+      alert('Please log in or register first to upload documents.');
       navigate('/login');
       return;
     }
     
-    // Check if there's already a stored resume
-    if (storedResume) {
-      setUploadError('Please delete your existing resume first before uploading a new one.');
-      return;
-    }
-    
     if (!uploadedFile) {
-      setUploadError('Please select a resume file to upload')
+      setUploadError('Please select a file to upload')
       return
     }
 
@@ -190,100 +194,68 @@ function ResumeUploadPage() {
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           setUploadProgress(progress)
-          setTimeout(function(){
-            location.reload();
-          },2000)
         }
       })
 
       console.log("Upload response:", response.data)
       
-      setUploadSuccess('Resume uploaded successfully!')
-      setAnalysisComplete(true)
+      setUploadSuccess('Document uploaded successfully!')
       
-      // Fetch the stored resume data from database after successful upload
-      await fetchStoredResume()
+      // Fetch the updated documents list from database after successful upload
+      await fetchStoredDocuments()
       
       // Clear the temporary uploaded file state since we now have it in database
       setUploadedFile(null)
       setUploadProgress(0)
 
     } catch (error) {
-      console.error('Error uploading resume:', error)
+      console.error('Error uploading document:', error)
       if (error.response?.status === 401) {
         alert('Your session has expired. Please log in again.');
         localStorage.removeItem("token");
         navigate('/login');
-      } else if (error.response?.status === 400) {
-        setUploadError('You already have a resume uploaded. Please delete it first.');
       } else {
-        setUploadError('Failed to upload resume. Please try again.');
+        setUploadError('Failed to upload document. Please try again.');
       }
     } finally {
       setIsUploading(false)
     }
   }
 
-  const removeFile = async () => {
+  const removeFile = async (documentId) => {
     // Check if user is logged in
     if (!isUserLoggedIn()) {
-      alert('Please log in or register first to manage your resume.');
+      alert('Please log in or register first to manage your documents.');
       navigate('/login');
       return;
     }
 
-    const resumeId = storedResume.id
+    if (!window.confirm('Are you sure you want to delete this document?')) {
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token")
-      await axios.delete(`${URL}/deleteResume/${resumeId}`, {
+      await axios.delete(`${URL}/deleteResume/${documentId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
       
-      setStoredResume(null)
-      setUploadedFile(null)
-      setUploadProgress(0)
-      setAnalysisComplete(false)
+      // Update local state by removing the deleted document
+      setStoredDocuments(prev => prev.filter(doc => doc.id !== documentId))
       setUploadError("")
-      setUploadSuccess("Resume deleted successfully!")
+      setUploadSuccess("Document deleted successfully!")
       
-      // Clear the file input
-      const fileInput = document.getElementById('resume-upload');
-      if (fileInput) {
-        fileInput.value = '';
-      }
     } catch (error) {
-      console.error('Error deleting resume:', error)
+      console.error('Error deleting document:', error)
       if (error.response?.status === 401) {
         alert('Your session has expired. Please log in again.');
         localStorage.removeItem("token");
         navigate('/login');
       } else {
-        setUploadError(error.response.data.message)
+        setUploadError(error.response?.data?.message || 'Error deleting document')
       }
-    }
-  }
-
-  const uploadNewResume = () => {
-    // Check if user is logged in
-    if (!isUserLoggedIn()) {
-      alert('Please log in or register first to upload your resume.');
-      navigate('/login');
-      return;
-    }
-
-    setUploadedFile(null)
-    setUploadProgress(0)
-    setAnalysisComplete(false)
-    setUploadError("")
-    setUploadSuccess("")
-    
-    // Clear the file input
-    const fileInput = document.getElementById('resume-upload');
-    if (fileInput) {
-      fileInput.value = '';
     }
   }
 
@@ -294,51 +266,70 @@ function ResumeUploadPage() {
     return cleanedPath.split('/').pop() || cleanedPath.split('\\').pop() || cleanedPath;
   }
 
-  // Download the file using the resumePath from backend - Supports both PDF and DOCX
-  const handleDownload = async () => {
+  // Get file type badge color
+  const getFileTypeBadge = (docType, fileName) => {
+    const fileExtension = fileName?.split('.').pop()?.toLowerCase();
+    
+    if (docType) {
+      return (
+        <Badge variant="secondary" className="capitalize">
+          {docType}
+        </Badge>
+      );
+    }
+    
+    // Fallback to file extension based badge
+    switch (fileExtension) {
+      case 'pdf':
+        return <Badge className="bg-red-100 text-red-800">PDF</Badge>;
+      case 'doc':
+      case 'docx':
+        return <Badge className="bg-blue-100 text-blue-800">Word</Badge>;
+      default:
+        return <Badge variant="secondary">Document</Badge>;
+    }
+  }
+
+  // Download the file using the document ID
+  const handleDownload = async (documentId, fileName) => {
     // Check if user is logged in
     if (!isUserLoggedIn()) {
-      alert('Please log in or register first to download your resume.');
+      alert('Please log in or register first to download documents.');
       navigate('/login');
-      return;
-    }
-
-    if (!storedResume || !storedResume.resumePath) {
-      setUploadError("No resume file available for download");
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
       
-      // Use the API endpoint instead of direct file access
-      const response = await axios.get(`${URL}/downloadResume`, {
+      // Use the API endpoint for downloading
+      const response = await axios.get(`${URL}/applicants/${documentId}/resume`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
-        responseType: 'blob' // Important for file downloads
+        responseType: 'blob'
       });
 
-      // Get filename from Content-Disposition header or generate one
+      // Get filename from Content-Disposition header or use the stored filename
       const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'resume';
+      let downloadFileName = fileName || 'document';
       
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
         if (fileNameMatch && fileNameMatch[1]) {
-          fileName = fileNameMatch[1];
+          downloadFileName = fileNameMatch[1];
         }
       }
 
       // Get content type to determine file extension if not in filename
       const contentType = response.headers['content-type'];
-      if (!fileName.includes('.') && contentType) {
+      if (!downloadFileName.includes('.') && contentType) {
         if (contentType.includes('pdf')) {
-          fileName += '.pdf';
+          downloadFileName += '.pdf';
         } else if (contentType.includes('word') || contentType.includes('docx')) {
-          fileName += '.docx';
+          downloadFileName += '.docx';
         } else if (contentType.includes('msword')) {
-          fileName += '.doc';
+          downloadFileName += '.doc';
         }
       }
 
@@ -351,7 +342,7 @@ function ResumeUploadPage() {
       // Create download link
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileName;
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -359,7 +350,7 @@ function ResumeUploadPage() {
       // Clean up
       window.URL.revokeObjectURL(url);
       
-      console.log('Resume downloaded successfully:', fileName);
+      console.log('Document downloaded successfully:', downloadFileName);
       
     } catch (error) {
       console.error('Download error:', error);
@@ -368,9 +359,9 @@ function ResumeUploadPage() {
         localStorage.removeItem("token");
         navigate('/login');
       } else if (error.response?.status === 404) {
-        setUploadError('Resume file not found on server.');
+        setUploadError('Document file not found on server.');
       } else if (error.response?.status === 500) {
-        setUploadError('Server error while downloading resume. Please try again.');
+        setUploadError('Server error while downloading document. Please try again.');
       } else {
         setUploadError(`Download failed: ${error.message}`);
       }
@@ -388,10 +379,10 @@ function ResumeUploadPage() {
             <FileText className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Upload Your Resume
+            Manage Your Documents
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Upload your resume to get started with job applications. You can upload one resume at a time.
+            Upload and manage your resumes and documents. Only PDF, DOC, and DOCX files are supported.
           </p>
           
           {!isUserLoggedIn() && (
@@ -399,7 +390,7 @@ function ResumeUploadPage() {
               <div className="flex items-center justify-center gap-2">
                 <LogIn className="h-5 w-5 text-yellow-700" />
                 <p className="text-yellow-800 font-medium">
-                  Please <Link to="/login" className="underline hover:text-yellow-900">log in</Link> or <Link to="/signup" className="underline hover:text-yellow-900">register</Link> to upload and manage your resume
+                  Please <Link to="/login" className="underline hover:text-yellow-900">log in</Link> or <Link to="/signup" className="underline hover:text-yellow-900">register</Link> to upload and manage your documents
                 </p>
               </div>
             </div>
@@ -411,29 +402,14 @@ function ResumeUploadPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5 text-primary" />
-                Resume Upload
+                Document Upload
               </CardTitle>
               <CardDescription>
-                Upload your resume in PDF, DOC, or DOCX format. Maximum file size: 50MB.
+                Upload your resumes and documents in PDF, DOC, or DOCX format. Maximum file size: 50MB.
                 {!isUserLoggedIn() && (
                   <span className="text-yellow-600 font-medium block mt-1">
-                    🔒 You need to be logged in to upload a resume
+                    🔒 You need to be logged in to upload documents
                   </span>
-                )}
-                {isUserLoggedIn() && storedResume && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-blue-800 text-sm font-medium">
-                          You already have a resume uploaded
-                        </p>
-                        <p className="text-blue-700 text-xs mt-1">
-                          Please delete your current resume first to upload a new one
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 )}
               </CardDescription>
             </CardHeader>
@@ -454,7 +430,7 @@ function ResumeUploadPage() {
               )}
 
               <div className="space-y-6">
-                {/* Resume Upload Section */}
+                {/* Document Upload Section */}
                 <div className="space-y-4">
                   {!isUserLoggedIn() ? (
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
@@ -465,7 +441,7 @@ function ResumeUploadPage() {
                         Authentication Required
                       </h3>
                       <p className="text-muted-foreground mb-6">
-                        Please log in or create an account to upload your resume
+                        Please log in or create an account to upload documents
                       </p>
                       <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Link to="/login">
@@ -481,84 +457,28 @@ function ResumeUploadPage() {
                         </Link>
                       </div>
                     </div>
-                  ) : storedResume ? (
-                    // Show existing resume with delete option
-                    <div className="space-y-4">
-                      <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-6 text-center">
-                        <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <FileText className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2">
-                          Resume Already Uploaded
-                        </h3>
-                        <p className="text-muted-foreground mb-4">
-                          You have already uploaded a resume. Delete it first to upload a new one.
-                        </p>
-                        
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
-                              <FileText className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {getFileNameFromPath(storedResume.resumePath)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                <strong>Uploaded:</strong> {storedResume.uploadedAt ? new Date(storedResume.uploadedAt).toLocaleDateString() : 'Recently'}
-                              </p>
-                              <Badge className="bg-green-100 text-green-800 mt-1">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Stored in Database
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              type="button"
-                              onClick={handleDownload}
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              type="button" 
-                              onClick={removeFile}
-                              className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:text-red-800"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Resume
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   ) : !uploadedFile ? (
-                    // Show upload interface when no resume exists
+                    // Show upload interface
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
                       <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Upload className="h-8 w-8 text-primary" />
+                        <Plus className="h-8 w-8 text-primary" />
                       </div>
                       <h3 className="text-lg font-semibold text-foreground mb-2">
-                        Choose your resume file
+                        Add New Document
                       </h3>
                       <p className="text-muted-foreground mb-6">
-                        Drag and drop your resume here, or click to browse files
+                        Drag and drop your file here, or click to browse files
                       </p>
                       <Input
                         type="file"
                         accept=".pdf,.doc,.docx"
                         onChange={handleFileUpload}
                         className="hidden"
-                        id="resume-upload"
+                        id="document-upload"
                         required
                       />
                       <Button asChild type="button">
-                        <label htmlFor="resume-upload" className="cursor-pointer">
+                        <label htmlFor="document-upload" className="cursor-pointer">
                           <Upload className="h-4 w-4 mr-2" />
                           Choose File
                         </label>
@@ -590,7 +510,7 @@ function ResumeUploadPage() {
                           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
-                                <FileText className="h-5 w-5 text-primary" />
+                                <File className="h-5 w-5 text-primary" />
                               </div>
                               <div>
                                 <p className="font-medium text-foreground">
@@ -611,7 +531,7 @@ function ResumeUploadPage() {
                                 type="button" 
                                 onClick={() => {
                                   setUploadedFile(null);
-                                  const fileInput = document.getElementById('resume-upload');
+                                  const fileInput = document.getElementById('document-upload');
                                   if (fileInput) fileInput.value = '';
                                 }}
                               >
@@ -636,7 +556,7 @@ function ResumeUploadPage() {
                               ) : (
                                 <>
                                   <Upload className="h-4 w-4 mr-2" />
-                                  Upload Resume
+                                  Upload Document
                                   <ArrowRight className="h-4 w-4 ml-2" />
                                 </>
                               )}
@@ -647,67 +567,80 @@ function ResumeUploadPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Display stored documents */}
+                {storedDocuments.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Your Active Documents</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Showing {storedDocuments.length} active document(s)
+                    </p>
+                    <div className="space-y-3">
+                      {storedDocuments.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium text-foreground">
+                                  {doc.fileName || getFileNameFromPath(doc.fileDir)}
+                                </p>
+                                {getFileTypeBadge(doc.docType, doc.fileName)}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                <strong>Uploaded:</strong> {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'Unknown date'}
+                              </p>
+                              {doc.updatedAt && doc.updatedAt !== doc.createdAt && (
+                                <p className="text-sm text-muted-foreground">
+                                  <strong>Updated:</strong> {new Date(doc.updatedAt).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              type="button"
+                              onClick={() => handleDownload(doc.id, doc.fileName)}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              type="button" 
+                              onClick={() => removeFile(doc.id)}
+                              className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {storedDocuments.length === 0 && isUserLoggedIn() && (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      No Active Documents
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Upload your first document to get started
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </form>
-
-        {analysisComplete && storedResume && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
-              What's Next?
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                      <TrendingUp className="h-6 w-6 text-primary group-hover:text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold group-hover:text-white">Career Insights</h3>
-                      <p className="text-sm text-muted-foreground group-hover:text-gray-300">
-                        Get detailed analysis of your career path and growth opportunities.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                      <Users className="h-6 w-6 text-primary group-hover:text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold group-hover:text-white">Network Building</h3>
-                      <p className="text-sm text-muted-foreground group-hover:text-gray-300">
-                        Connect with professionals in your field and expand your network.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow cursor-pointer hover:bg-[#1c1c1c] hover:text-white group">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center group-hover:bg-white/20">
-                      <Award className="h-6 w-6 text-primary group-hover:text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold group-hover:text-white">Skill Development</h3>
-                      <p className="text-sm text-muted-foreground group-hover:text-gray-300">
-                        Discover courses and certifications to enhance your skills.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
 
         {/* Only show "Ready to Find Your Dream Job?" section if user is NOT logged in */}
         {!isUserLoggedIn() && (
