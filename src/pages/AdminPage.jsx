@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -55,14 +55,60 @@ import {
   MoreVertical,
   Download,
   RefreshCw,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 
 function AdminPage() {
   const [activeView, setActiveView] = useState('dashboard')
   const [selectedItem, setSelectedItem] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [adminUser, setAdminUser] = useState(null)
+  const [employers, setEmployers] = useState([]) // Add state for employers
+  const navigate = useNavigate()
+  const URL = "http://localhost:4000";
+
+  // Check if user is authenticated and fetch data
+  useEffect(() => {
+    async function fetchUserAdmin() {
+      const token = localStorage.getItem('adminToken')
+      
+      if (!token) {
+        navigate('/admin-login')
+        return
+      }
+
+      try {
+        const response = await axios.get(`${URL}/fetchData`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (response.data.success) {
+          setAdminUser(response.data.currentAdmin)
+          setEmployers(response.data.employers || [])
+        }
+      } catch (err) {
+        console.log('Error fetching admin data:', err.message)
+        // If there's an error, redirect to login
+        localStorage.removeItem('adminToken')
+        navigate('/admin-login')
+      }
+    }
+    
+    fetchUserAdmin()
+  }, [navigate])
+
+  const handleLogout = () => {
+    // Clear admin authentication data
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminUser')
+    
+    // Redirect to admin login page
+    navigate('/admin-login')
+  }
 
   const sidebarItems = [
     {
@@ -72,10 +118,10 @@ function AdminPage() {
       badge: null
     },
     {
-      title: "User Management",
+      title: "Employer Management",
       icon: Users,
-      view: "users",
-      badge: "14"
+      view: "employers",
+      badge: employers.length.toString() // Dynamic badge count
     },
     {
       title: "Job Management",
@@ -103,14 +149,7 @@ function AdminPage() {
     }
   ]
 
-  const users = [
-    { id: 1, name: 'Joshua Dee Tulali', email: 'joshua.tulali@unasatrabaho.com', role: 'Admin', status: 'active', joinDate: '2025-01-15', lastLogin: '2025-01-20 14:30' },
-    { id: 2, name: 'Aerean Nicole Flores', email: 'aerean.flores@unasatrabaho.com', role: 'Moderator', status: 'active', joinDate: '2025-01-10', lastLogin: '2025-01-19 09:15' },
-    { id: 3, name: 'Ryan Cunnanan', email: 'ryan.cunnanan@unasatrabaho.com', role: 'User', status: 'suspended', joinDate: '2025-01-05', lastLogin: '2025-01-15 11:20' },
-    { id: 4, name: 'Seth Ongotan', email: 'seth.ongotan@unasatrabaho.com', role: 'User', status: 'active', joinDate: '2025-01-12', lastLogin: '2025-01-20 16:45' },
-    { id: 5, name: 'Maria Santos', email: 'maria.santos@unasatrabaho.com', role: 'User', status: 'pending', joinDate: '2025-01-18', lastLogin: '2025-01-18 10:00' },
-  ]
-
+  // Sample jobs data - you might want to fetch this from your API too
   const jobs = [
     { id: 1, title: 'Senior Software Engineer', company: 'Globe Telecom', applicants: 25, status: 'active', postedDate: '2025-01-15', salary: '₱65,000 - ₱85,000', views: 324 },
     { id: 2, title: 'Marketing Specialist', company: 'Jollibee Foods Corporation', applicants: 18, status: 'active', postedDate: '2025-01-12', salary: '₱35,000 - ₱50,000', views: 287 },
@@ -119,9 +158,12 @@ function AdminPage() {
     { id: 5, title: 'Registered Nurse', company: 'St. Luke\'s Medical Center', applicants: 28, status: 'active', postedDate: '2025-01-14', salary: '₱30,000 - ₱45,000', views: 376 },
   ]
 
+  // Calculate system stats based on real data
   const systemStats = {
     totalUsers: 14,
     activeUsers: 12,
+    totalEmployers: employers.length,
+    activeEmployers: employers.filter(emp => emp.status === 'active').length,
     totalJobs: 5,
     activeJobs: 4,
     totalApplications: 118,
@@ -130,9 +172,23 @@ function AdminPage() {
     serverLoad: '24%'
   }
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => setIsRefreshing(false), 1000)
+    try {
+      const token = localStorage.getItem('adminToken')
+      const response = await axios.get(`${URL}/fetchData`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.data.success) {
+        setAdminUser(response.data.currentAdmin)
+        setEmployers(response.data.employers || [])
+      }
+    } catch (err) {
+      console.log('Error refreshing data:', err.message)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const handleRowClick = (item, type) => {
@@ -155,12 +211,48 @@ function AdminPage() {
     const variants = {
       Admin: 'bg-purple-100 text-purple-800 border-purple-200',
       Moderator: 'bg-blue-100 text-blue-800 border-blue-200',
+      Employer: 'bg-green-100 text-green-800 border-green-200',
       User: 'bg-gray-100 text-gray-800 border-gray-200'
     }
     return <Badge variant="outline" className={`${variants[role]} font-medium`}>{role}</Badge>
   }
 
-  const usersColumns = [
+  // Function to get the display name for the logged-in user
+  const getDisplayName = () => {
+    if (!adminUser) return 'Administrator'
+    
+    // Check different possible field names from your database
+    if (adminUser.fullName) return adminUser.fullName
+    if (adminUser.name) return adminUser.name
+    if (adminUser.firstName && adminUser.lastName) return `${adminUser.firstName} ${adminUser.lastName}`
+    if (adminUser.firstName) return adminUser.firstName
+    if (adminUser.email) return adminUser.email.split('@')[0]
+    
+    return 'Administrator'
+  }
+
+  // Function to get the email for the logged-in user
+  const getDisplayEmail = () => {
+    if (!adminUser) return 'admin@careerconnect.com'
+    
+    if (adminUser.email) return adminUser.email
+    return 'admin@careerconnect.com'
+  }
+
+  // Format employer data for the table
+  const formatEmployersForTable = () => {
+    return employers.map(employer => ({
+      id: employer.id,
+      name: employer.fullName || employer.name || 'N/A',
+      email: employer.email || 'N/A',
+      role: 'Employer',
+      status: employer.status || 'active',
+      joinDate: employer.createdAt ? new Date(employer.createdAt).toLocaleDateString() : 'N/A',
+      lastLogin: employer.lastLogin || 'Never'
+    }))
+  }
+
+  const employersColumns = [
     {
       accessorKey: "id",
       header: "ID",
@@ -168,7 +260,7 @@ function AdminPage() {
     },
     {
       accessorKey: "name",
-      header: "Name",
+      header: "Company Name",
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.getValue("name")}</div>
@@ -199,7 +291,12 @@ function AdminPage() {
       header: "",
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-blue-50">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 hover:bg-blue-50"
+            onClick={() => handleRowClick(row.original, 'employer')}
+          >
             <Eye className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-50">
@@ -265,7 +362,12 @@ function AdminPage() {
       header: "",
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-blue-50">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 hover:bg-blue-50"
+            onClick={() => handleRowClick(row.original, 'job')}
+          >
             <Eye className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-50">
@@ -283,8 +385,8 @@ function AdminPage() {
     switch (activeView) {
       case 'dashboard':
         return renderDashboard()
-      case 'users':
-        return renderUsersTable()
+      case 'employers':
+        return renderEmployersTable()
       case 'jobs':
         return renderJobsTable()
       case 'applicants':
@@ -318,14 +420,14 @@ function AdminPage() {
 
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">Job Postings</CardTitle>
-            <Briefcase className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-green-900">Employers</CardTitle>
+            <Building className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">{systemStats.totalJobs}</div>
+            <div className="text-2xl font-bold text-green-900">{systemStats.totalEmployers}</div>
             <div className="flex items-center gap-1 text-xs">
-              <Activity className="h-3 w-3 text-emerald-600" />
-              <span className="text-green-700">{systemStats.activeJobs} active</span>
+              <CheckCircle className="h-3 w-3 text-emerald-600" />
+              <span className="text-green-700">{systemStats.activeEmployers} active</span>
             </div>
           </CardContent>
         </Card>
@@ -361,8 +463,8 @@ function AdminPage() {
         <Card className="border-0 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Recent User Activity</CardTitle>
-              <CardDescription>Latest user logins and actions</CardDescription>
+              <CardTitle>Recent Employer Activity</CardTitle>
+              <CardDescription>Latest employer logins and actions</CardDescription>
             </div>
             <Button variant="outline" size="sm">
               View All
@@ -370,20 +472,18 @@ function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {users.slice(0, 4).map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 rounded-lg border">
+              {formatEmployersForTable().slice(0, 4).map((employer) => (
+                <div key={employer.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">
-                        {user.name.split(' ').map(n => n[0]).join('')}
-                      </span>
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                      <Building className="h-4 w-4 text-white" />
                     </div>
                     <div>
-                      <div className="font-medium text-sm">{user.name}</div>
-                      <div className="text-xs text-muted-foreground">Last login: {user.lastLogin}</div>
+                      <div className="font-medium text-sm">{employer.name}</div>
+                      <div className="text-xs text-muted-foreground">Last login: {employer.lastLogin}</div>
                     </div>
                   </div>
-                  {getStatusBadge(user.status)}
+                  {getStatusBadge(employer.status)}
                 </div>
               ))}
             </div>
@@ -421,31 +521,31 @@ function AdminPage() {
     </div>
   )
 
-  const renderUsersTable = () => (
+  const renderEmployersTable = () => (
     <Card className="border-0 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage all user accounts and permissions</CardDescription>
+          <CardTitle>Employer Management</CardTitle>
+          <CardDescription>Manage all employer accounts and company profiles</CardDescription>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Button size="sm" className="bg-green-600 hover:bg-green-700">
             <UserPlus className="h-4 w-4 mr-2" />
-            Add User
+            Add Employer
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         <DataTable
-          columns={usersColumns}
-          data={users}
+          columns={employersColumns}
+          data={formatEmployersForTable()}
           searchKey="name"
-          searchPlaceholder="Search users by name or email..."
-          onRowClick={(user) => handleRowClick(user, 'user')}
+          searchPlaceholder="Search employers by company name or email..."
+          onRowClick={(employer) => handleRowClick(employer, 'employer')}
         />
       </CardContent>
     </Card>
@@ -463,7 +563,7 @@ function AdminPage() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
             <Briefcase className="h-4 w-4 mr-2" />
             Post Job
           </Button>
@@ -623,13 +723,21 @@ function AdminPage() {
           <SidebarFooter className="border-t px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-10 h-10 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium text-sm">JT</span>
+                <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Joshua Tulali</p>
+                <p className="text-sm font-medium">
+                  {getDisplayName()}
+                </p>
                 <p className="text-xs text-muted-foreground">Super Administrator</p>
               </div>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-red-50">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 hover:bg-red-50"
+                onClick={handleLogout}
+                title="Logout"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -637,8 +745,9 @@ function AdminPage() {
         </Sidebar>
         
         <div className="flex-1 flex flex-col">
+          {/* Top Navigation Bar with Admin Info */}
           <div className="bg-white border-b border-slate-200 shadow-sm">
-            <div className="px-6 py-4">
+            <div className="px-6 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <SidebarTrigger className="lg:hidden" />
@@ -646,7 +755,7 @@ function AdminPage() {
                     <h1 className="text-2xl font-bold text-slate-900 capitalize">{activeView}</h1>
                     <p className="text-slate-600 text-sm">
                       {activeView === 'dashboard' && 'Platform overview and key metrics'}
-                      {activeView === 'users' && 'User account management and permissions'}
+                      {activeView === 'employers' && 'Employer account management and company profiles'}
                       {activeView === 'jobs' && 'Job posting management and analytics'}
                       {activeView === 'applicants' && 'Application review and processing'}
                       {activeView === 'system' && 'System performance and monitoring'}
@@ -654,22 +763,46 @@ function AdminPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </Button>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                    <Input
-                      placeholder="Search..."
-                      className="pl-10 w-48 lg:w-64 border-slate-300"
-                    />
+                
+                {/* Admin Info and Logout */}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-slate-900">
+                      Welcome, {getDisplayName()}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {getDisplayEmail()}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleLogout}
+                      className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                    
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                      <Input
+                        placeholder="Search..."
+                        className="pl-10 w-48 lg:w-64 border-slate-300"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -686,20 +819,20 @@ function AdminPage() {
             <div className="mx-auto w-full max-w-2xl">
               <DrawerHeader className="border-b">
                 <DrawerTitle className="flex items-center gap-2">
-                  {selectedItem?.type === 'user' ? (
+                  {selectedItem?.type === 'employer' ? (
                     <>
-                      <Users className="h-5 w-5 text-blue-600" />
-                      User Details
+                      <Building className="h-5 w-5 text-green-600" />
+                      Employer Details
                     </>
                   ) : (
                     <>
-                      <Briefcase className="h-5 w-5 text-green-600" />
+                      <Briefcase className="h-5 w-5 text-blue-600" />
                       Job Details
                     </>
                   )}
                 </DrawerTitle>
                 <DrawerDescription>
-                  {selectedItem?.type === 'user' 
+                  {selectedItem?.type === 'employer' 
                     ? `Detailed information for ${selectedItem?.name}` 
                     : `Complete details for ${selectedItem?.title}`
                   }
@@ -707,13 +840,11 @@ function AdminPage() {
               </DrawerHeader>
               
               <div className="p-6">
-                {selectedItem?.type === 'user' ? (
+                {selectedItem?.type === 'employer' ? (
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-lg">
-                          {selectedItem?.name.split(' ').map(n => n[0]).join('')}
-                        </span>
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                        <Building className="h-8 w-8 text-white" />
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold">{selectedItem?.name}</h3>
@@ -768,7 +899,7 @@ function AdminPage() {
                 ) : (
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                         <Briefcase className="h-8 w-8 text-white" />
                       </div>
                       <div>
@@ -830,10 +961,10 @@ function AdminPage() {
                     <Edit className="h-4 w-4 mr-2" />
                     Edit {selectedItem?.type}
                   </Button>
-                  {selectedItem?.type === 'user' && (
+                  {selectedItem?.type === 'employer' && (
                     <Button variant="outline" className="flex-1 border-red-300 text-red-700 hover:bg-red-50">
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Deactivate User
+                      Deactivate Employer
                     </Button>
                   )}
                   {selectedItem?.type === 'job' && (

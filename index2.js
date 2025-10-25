@@ -145,6 +145,29 @@ app.post("/admin-login", async(req, res) => {
     
 })
 
+app.get("/fetchData", authenticateToken, async(req, res) => {
+  const currentUserId = req.user.id
+
+  try{
+    const currentAdmin = await Users.findOne({
+      where: {
+        id: currentUserId
+      }
+    })
+
+    const employers = await Users.findAll({
+      where:{
+        role: "Employer"
+      }
+    })
+
+    res.status(200).json({success: true, currentAdmin: currentAdmin, employers: employers})
+  }catch(err){
+    console.log(err.message)
+    res.status(400).json({success: false, message: err.message})
+  }
+})
+
 app.listen(port, () => {
     console.log(`Server is listening at port ${port}`)
 })
