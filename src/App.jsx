@@ -12,6 +12,7 @@ import CompaniesPage from './pages/CompaniesPage'
 import AdminPage from './pages/AdminPage'
 import ResumeUploadPage from './pages/ResumeUploadPage'
 import CompanyDashboardPage from './pages/CompanyDashboardPage'
+import AdminLoginPage from './pages/AdminLoginPage'
 
 
 
@@ -33,6 +34,7 @@ function App() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/upload-resume" element={<ResumeUploadPage />} />
             <Route path="/company-dashboard" element={<CompanyDashboardPage />} />
+            <Route path="/admin-login" element={<AdminLoginPage />} />
           </Routes>
         </div>
       </Router>
