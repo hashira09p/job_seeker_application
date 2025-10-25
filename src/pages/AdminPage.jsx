@@ -67,7 +67,8 @@ function AdminPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [adminUser, setAdminUser] = useState(null)
-  const [employers, setEmployers] = useState([]) // Add state for employers
+  const [employers, setEmployers] = useState([])
+  const [jobPostings, setJobPostings] = useState([])
   const navigate = useNavigate()
   const URL = "http://localhost:4000";
 
@@ -89,6 +90,7 @@ function AdminPage() {
         if (response.data.success) {
           setAdminUser(response.data.currentAdmin)
           setEmployers(response.data.employers || [])
+          setJobPostings(response.data.jobPostings || [])
         }
       } catch (err) {
         console.log('Error fetching admin data:', err.message)
@@ -110,6 +112,31 @@ function AdminPage() {
     navigate('/admin-login')
   }
 
+  // Function to update job review status
+  const updateJobReviewStatus = async (jobId, reviewedStatus) => {
+    try {
+      const token = localStorage.getItem('adminToken')
+      const response = await axios.patch(`${URL}/updateJobReview/${jobId}`, {
+        reviewed: reviewedStatus
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.data.success) {
+        // Update the job in local state
+        setJobPostings(prevJobs => 
+          prevJobs.map(job => 
+            job.id === jobId ? { ...job, reviewed: reviewedStatus } : job
+          )
+        )
+        return true
+      }
+    } catch (err) {
+      console.log('Error updating job review status:', err.message)
+      return false
+    }
+  }
+
   const sidebarItems = [
     {
       title: "Dashboard",
@@ -121,41 +148,20 @@ function AdminPage() {
       title: "Employer Management",
       icon: Users,
       view: "employers",
-      badge: employers.length.toString() // Dynamic badge count
+      badge: employers.length.toString()
     },
     {
       title: "Job Management",
       icon: Briefcase,
       view: "jobs",
-      badge: "5"
-    },
-    {
-      title: "Applications",
-      icon: FileText,
-      view: "applicants",
-      badge: "118"
+      badge: jobPostings.length.toString()
     },
     {
       title: "System",
       icon: Server,
       view: "system",
       badge: null
-    },
-    {
-      title: "Security",
-      icon: Shield,
-      view: "security",
-      badge: null
     }
-  ]
-
-  // Sample jobs data - you might want to fetch this from your API too
-  const jobs = [
-    { id: 1, title: 'Senior Software Engineer', company: 'Globe Telecom', applicants: 25, status: 'active', postedDate: '2025-01-15', salary: '₱65,000 - ₱85,000', views: 324 },
-    { id: 2, title: 'Marketing Specialist', company: 'Jollibee Foods Corporation', applicants: 18, status: 'active', postedDate: '2025-01-12', salary: '₱35,000 - ₱50,000', views: 287 },
-    { id: 3, title: 'Customer Service Representative', company: 'BPO Solutions Inc.', applicants: 32, status: 'closed', postedDate: '2025-01-08', salary: '₱25,000 - ₱35,000', views: 512 },
-    { id: 4, title: 'Senior Accountant', company: 'SM Investments Corporation', applicants: 15, status: 'active', postedDate: '2025-01-16', salary: '₱40,000 - ₱55,000', views: 198 },
-    { id: 5, title: 'Registered Nurse', company: 'St. Luke\'s Medical Center', applicants: 28, status: 'active', postedDate: '2025-01-14', salary: '₱30,000 - ₱45,000', views: 376 },
   ]
 
   // Calculate system stats based on real data
@@ -164,8 +170,9 @@ function AdminPage() {
     activeUsers: 12,
     totalEmployers: employers.length,
     activeEmployers: employers.filter(emp => emp.status === 'active').length,
-    totalJobs: 5,
-    activeJobs: 4,
+    totalJobs: jobPostings.length,
+    activeJobs: jobPostings.filter(job => job.status === 'active').length,
+    pendingReviewJobs: jobPostings.filter(job => !job.reviewed).length,
     totalApplications: 118,
     systemUptime: '99.9%',
     responseTime: '128ms',
@@ -183,6 +190,7 @@ function AdminPage() {
       if (response.data.success) {
         setAdminUser(response.data.currentAdmin)
         setEmployers(response.data.employers || [])
+        setJobPostings(response.data.jobPostings || [])
       }
     } catch (err) {
       console.log('Error refreshing data:', err.message)
@@ -202,7 +210,8 @@ function AdminPage() {
       inactive: 'bg-gray-100 text-gray-800 border-gray-200',
       pending: 'bg-amber-100 text-amber-800 border-amber-200',
       suspended: 'bg-red-100 text-red-800 border-red-200',
-      closed: 'bg-slate-100 text-slate-800 border-slate-200'
+      closed: 'bg-slate-100 text-slate-800 border-slate-200',
+      draft: 'bg-gray-100 text-gray-800 border-gray-200'
     }
     return <Badge variant="outline" className={`${variants[status]} font-medium`}>{status}</Badge>
   }
@@ -249,6 +258,29 @@ function AdminPage() {
       status: employer.status || 'active',
       joinDate: employer.createdAt ? new Date(employer.createdAt).toLocaleDateString() : 'N/A',
       lastLogin: employer.lastLogin || 'Never'
+    }))
+  }
+
+  // Format job postings data for the table
+  const formatJobPostingsForTable = () => {
+    return jobPostings.map(job => ({
+      id: job.id,
+      title: job.title || 'No Title',
+      description: job.description || 'No description',
+      location: job.location || 'N/A',
+      type: job.type || 'N/A',
+      companyID: job.companyID || 'N/A',
+      companyName: job.company?.name || 'Unknown Company',
+      industry: job.company?.industry || 'N/A',
+      position: job.position || 'N/A',
+      salary: job.salaryMin && job.salaryMax ? `₱${job.salaryMin.toLocaleString()} - ₱${job.salaryMax.toLocaleString()}` : 'Not specified',
+      status: job.status || 'draft',
+      reviewed: job.reviewed ? 'Yes' : 'No',
+      postedDate: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A',
+      updatedAt: job.updatedAt ? new Date(job.updatedAt).toLocaleDateString() : 'N/A',
+      // For display purposes, we'll use a placeholder for applicants and views
+      applicants: Math.floor(Math.random() * 50), // Random number for demo
+      views: Math.floor(Math.random() * 500) // Random number for demo
     }))
   }
 
@@ -322,8 +354,35 @@ function AdminPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.getValue("title")}</div>
-          <div className="text-sm text-muted-foreground">{row.original.company}</div>
+          <div className="text-sm text-muted-foreground">{row.original.position}</div>
         </div>
+      ),
+    },
+    {
+      accessorKey: "companyName",
+      header: "Company",
+      cell: ({ row }) => (
+        <div className="text-sm font-medium">
+          {row.getValue("companyName")}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "location",
+      header: "Location",
+      cell: ({ row }) => (
+        <div className="text-sm">
+          {row.getValue("location")}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+          {row.getValue("type")}
+        </Badge>
       ),
     },
     {
@@ -336,11 +395,11 @@ function AdminPage() {
       ),
     },
     {
-      accessorKey: "views",
-      header: "Views",
+      accessorKey: "salary",
+      header: "Salary",
       cell: ({ row }) => (
-        <div className="text-center text-muted-foreground">
-          {row.original.views}
+        <div className="text-sm">
+          {row.getValue("salary")}
         </div>
       ),
     },
@@ -350,12 +409,20 @@ function AdminPage() {
       cell: ({ row }) => getStatusBadge(row.getValue("status")),
     },
     {
-      accessorKey: "postedDate",
-      header: "Posted",
+      accessorKey: "reviewed",
+      header: "Reviewed",
+      cell: ({ row }) => (
+        <Badge 
+          variant="outline" 
+          className={row.getValue("reviewed") === 'Yes' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}
+        >
+          {row.getValue("reviewed")}
+        </Badge>
+      ),
     },
     {
-      accessorKey: "salary",
-      header: "Salary",
+      accessorKey: "postedDate",
+      header: "Posted",
     },
     {
       id: "actions",
@@ -370,9 +437,26 @@ function AdminPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-50">
-            <Edit className="h-4 w-4" />
-          </Button>
+          {row.original.reviewed === 'No' && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 hover:bg-green-50"
+              onClick={async (e) => {
+                e.stopPropagation()
+                const success = await updateJobReviewStatus(row.original.id, true)
+                if (success) {
+                  // Update the local state immediately for better UX
+                  const updatedJobs = formatJobPostingsForTable().map(job => 
+                    job.id === row.original.id ? { ...job, reviewed: 'Yes' } : job
+                  )
+                  // You might want to trigger a refresh or update state here
+                }
+              }}
+            >
+              <CheckCircle className="h-4 w-4" />
+            </Button>
+          )}
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-red-50">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -389,12 +473,8 @@ function AdminPage() {
         return renderEmployersTable()
       case 'jobs':
         return renderJobsTable()
-      case 'applicants':
-        return renderApplicantsView()
       case 'system':
         return renderSystemView()
-      case 'security':
-        return renderSecurityView()
       default:
         return renderDashboard()
     }
@@ -434,14 +514,15 @@ function AdminPage() {
 
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">Applications</CardTitle>
-            <FileText className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-purple-900">Job Postings</CardTitle>
+            <Briefcase className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-900">{systemStats.totalApplications}</div>
-            <p className="text-xs text-purple-700">
-              Across all job postings
-            </p>
+            <div className="text-2xl font-bold text-purple-900">{systemStats.totalJobs}</div>
+            <div className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="h-3 w-3 text-amber-600" />
+              <span className="text-purple-700">{systemStats.pendingReviewJobs} pending review</span>
+            </div>
           </CardContent>
         </Card>
 
@@ -493,24 +574,26 @@ function AdminPage() {
         <Card className="border-0 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Job Posting Analytics</CardTitle>
-              <CardDescription>Performance metrics for job listings</CardDescription>
+              <CardTitle>Recent Job Postings</CardTitle>
+              <CardDescription>Latest job listings and their status</CardDescription>
             </div>
             <Button variant="outline" size="sm">
-              Export
+              View All
             </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {jobs.slice(0, 4).map((job) => (
+              {formatJobPostingsForTable().slice(0, 4).map((job) => (
                 <div key={job.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{job.title}</div>
-                    <div className="text-xs text-muted-foreground">{job.company}</div>
+                    <div className="text-xs text-muted-foreground">{job.companyName} • {job.location}</div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-sm">{job.applicants} applicants</div>
-                    <div className="text-xs text-muted-foreground">{job.views} views</div>
+                    <div className="text-xs text-muted-foreground">
+                      {job.reviewed === 'Yes' ? 'Reviewed' : 'Pending Review'}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -528,16 +611,7 @@ function AdminPage() {
           <CardTitle>Employer Management</CardTitle>
           <CardDescription>Manage all employer accounts and company profiles</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Employer
-          </Button>
-        </div>
+        {/* Removed Export and Add Employer buttons */}
       </CardHeader>
       <CardContent>
         <DataTable
@@ -558,47 +632,16 @@ function AdminPage() {
           <CardTitle>Job Management</CardTitle>
           <CardDescription>Manage job postings and monitor performance</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-            <Briefcase className="h-4 w-4 mr-2" />
-            Post Job
-          </Button>
-        </div>
+        {/* Removed Export and Post Job buttons */}
       </CardHeader>
       <CardContent>
         <DataTable
           columns={jobsColumns}
-          data={jobs}
+          data={formatJobPostingsForTable()}
           searchKey="title"
-          searchPlaceholder="Search jobs by title or company..."
+          searchPlaceholder="Search jobs by title, company, or location..."
           onRowClick={(job) => handleRowClick(job, 'job')}
         />
-      </CardContent>
-    </Card>
-  )
-
-  const renderApplicantsView = () => (
-    <Card className="border-0 shadow-sm">
-      <CardHeader>
-        <CardTitle>Application Management</CardTitle>
-        <CardDescription>Review and manage all job applications</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="text-center py-12">
-          <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Application Dashboard</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Comprehensive application management system with advanced filtering, 
-            status tracking, and communication tools.
-          </p>
-          <Button className="mt-4 bg-blue-600 hover:bg-blue-700">
-            Configure Application Settings
-          </Button>
-        </div>
       </CardContent>
     </Card>
   )
@@ -655,28 +698,6 @@ function AdminPage() {
     </Card>
   )
 
-  const renderSecurityView = () => (
-    <Card className="border-0 shadow-sm">
-      <CardHeader>
-        <CardTitle>Security Dashboard</CardTitle>
-        <CardDescription>Monitor security events and configure access controls</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="text-center py-12">
-          <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Security Management</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Advanced security controls, audit logs, and threat detection systems 
-            to protect your platform and user data.
-          </p>
-          <Button className="mt-4 bg-purple-600 hover:bg-purple-700">
-            Access Security Settings
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-slate-50">
@@ -688,7 +709,7 @@ function AdminPage() {
               </div>
               <div>
                 <h2 className="font-bold text-lg">Admin Console</h2>
-                <p className="text-white/70 text-xs">CareerConnect v2.1</p>
+                <p className="text-white/70 text-xs">UnaSaTrabaho v2.1</p>
               </div>
             </div>
           </SidebarHeader>
@@ -757,9 +778,7 @@ function AdminPage() {
                       {activeView === 'dashboard' && 'Platform overview and key metrics'}
                       {activeView === 'employers' && 'Employer account management and company profiles'}
                       {activeView === 'jobs' && 'Job posting management and analytics'}
-                      {activeView === 'applicants' && 'Application review and processing'}
                       {activeView === 'system' && 'System performance and monitoring'}
-                      {activeView === 'security' && 'Security controls and audit logs'}
                     </p>
                   </div>
                 </div>
@@ -904,11 +923,11 @@ function AdminPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold">{selectedItem?.title}</h3>
-                        <p className="text-muted-foreground">{selectedItem?.company}</p>
+                        <p className="text-muted-foreground">{selectedItem?.companyName}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {getStatusBadge(selectedItem?.status)}
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            {selectedItem?.applicants} applicants
+                          <Badge variant="outline" className={selectedItem?.reviewed === 'Yes' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}>
+                            {selectedItem?.reviewed === 'Yes' ? 'Reviewed' : 'Pending Review'}
                           </Badge>
                         </div>
                       </div>
@@ -920,7 +939,7 @@ function AdminPage() {
                           <Building className="h-4 w-4 text-blue-600" />
                           <div>
                             <p className="text-sm font-medium">Company</p>
-                            <p className="text-sm text-muted-foreground">{selectedItem?.company}</p>
+                            <p className="text-sm text-muted-foreground">{selectedItem?.companyName}</p>
                           </div>
                         </div>
                         
@@ -929,6 +948,14 @@ function AdminPage() {
                           <div>
                             <p className="text-sm font-medium">Salary Range</p>
                             <p className="text-sm text-muted-foreground">{selectedItem?.salary}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 rounded-lg border">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                          <div>
+                            <p className="text-sm font-medium">Job Type</p>
+                            <p className="text-sm text-muted-foreground">{selectedItem?.type}</p>
                           </div>
                         </div>
                       </div>
@@ -949,8 +976,25 @@ function AdminPage() {
                             <p className="text-sm text-muted-foreground">{selectedItem?.postedDate}</p>
                           </div>
                         </div>
+
+                        <div className="flex items-center gap-3 p-3 rounded-lg border">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <div>
+                            <p className="text-sm font-medium">Review Status</p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedItem?.reviewed === 'Yes' ? 'Approved by admin' : 'Awaiting admin review'}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    {selectedItem?.description && (
+                      <div className="border rounded-lg p-4">
+                        <h4 className="text-sm font-medium mb-2">Job Description</h4>
+                        <p className="text-sm text-muted-foreground">{selectedItem?.description}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -967,10 +1011,20 @@ function AdminPage() {
                       Deactivate Employer
                     </Button>
                   )}
-                  {selectedItem?.type === 'job' && (
-                    <Button variant="outline" className="flex-1 border-green-300 text-green-700 hover:bg-green-50">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Applications
+                  {selectedItem?.type === 'job' && selectedItem?.reviewed === 'No' && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
+                      onClick={async () => {
+                        const success = await updateJobReviewStatus(selectedItem.id, true)
+                        if (success) {
+                          setIsDrawerOpen(false)
+                          handleRefresh() // Refresh data to show updated status
+                        }
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve Job
                     </Button>
                   )}
                 </div>

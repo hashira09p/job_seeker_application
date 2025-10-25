@@ -161,10 +161,39 @@ app.get("/fetchData", authenticateToken, async(req, res) => {
       }
     })
 
-    res.status(200).json({success: true, currentAdmin: currentAdmin, employers: employers})
+    const jobPostings = await JobPostings.findAll({
+      include:{
+          model:Companies,
+          as:"company",
+          attributes:['name', "industry"]
+      }
+    })
+
+    res.status(200).json({success: true, currentAdmin: currentAdmin, employers: employers, jobPostings:jobPostings})
   }catch(err){
     console.log(err.message)
     res.status(400).json({success: false, message: err.message})
+  }
+})
+
+app.patch("/updateJobReview/:id", authenticateToken, async(req, res) => {
+  const jobPostingId = req.params.id
+  const updatedReviewed = req.body.reviewed
+  console.log(updatedReviewed)
+
+  try{
+    const jobPosting = await JobPostings.update({
+      reviewed: updatedReviewed
+    },{
+      where:{
+        id: jobPostingId
+      } 
+    })
+
+    res.status(200).json({success: true, message: "Update Successfully!"})
+  }catch(err){
+    console.log(err.message)
+     res.status(400).json({success: true, message: err.message})
   }
 })
 

@@ -209,7 +209,7 @@ function CompanyDashboardPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      alert("Job posted successfully!");
+      alert("Job post created successfully! Please standby and wait for the admin’s approval before it is officially posted on the Job Seeker side.");
 
       if (result.data && result.data.job) {
         setJobPostings(prev => [...prev, result.data.job]);
@@ -522,6 +522,18 @@ function CompanyDashboardPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => getStatusBadge(row.getValue("status")),
+    },
+    {
+      accessorKey: "reviewed",
+      header: "Reviewed",
+      cell: ({ row }) => (
+        <Badge 
+          variant="outline" 
+          className={row.getValue("reviewed") ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}
+        >
+          {row.getValue("reviewed") ? 'Yes' : 'No'}
+        </Badge>
+      ),
     },
     {
       accessorKey: "createdAt",

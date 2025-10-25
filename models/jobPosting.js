@@ -10,12 +10,13 @@ JobPostings.init({
     location: DataTypes.STRING,
     salaryMin: DataTypes.INTEGER,
     salaryMax: DataTypes.INTEGER,
-    status: DataTypes.STRING
+    status: DataTypes.STRING,
+    reviewed: DataTypes.BOOLEAN
   }, {
     sequelize,
     modelName: 'JobPostings',
     timestamps: true
-});  
+});
 
 JobPostings.associate = (models) => {
   JobPostings.belongsTo(models.Companies,{foreignKey: "companyID", as: "company"});

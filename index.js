@@ -171,7 +171,7 @@ app.post("/submit-login", async(req, res) => {
       }
     })
     
-    const role = user.role
+    
 
     console.log(user)
     
@@ -179,6 +179,8 @@ app.post("/submit-login", async(req, res) => {
       console.log("User not registered.")
       return res.status(400).json({success:false, message: "unregistered"})
     }
+
+    const role = user.role
 
     await bcrypt.compare(password, user.password, async(err, result) => {
       //this console.log will say false if it is wrong password
@@ -237,6 +239,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
       createdAt: job.createdAt,
+      reviewed: job.reviewed,
       applicants: job.applicants ? job.applicants : []
     }));
 
@@ -320,7 +323,8 @@ app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
       companyID: company.id,
       salaryMin: salaryMin,
       salaryMax: salaryMax,
-      status: "active"
+      status: "active",
+      reviewed: false
     })
 
     // console.log(result)
@@ -389,11 +393,14 @@ app.get("/jobs", async(req, res) => {
   try{
     const jobPosting = await JobPostings.findAll(
       {
+        where:{
+          reviewed: true
+        },
         include:{
           model:Companies,
           as:"company",
           attributes:['name', "industry"]
-          }
+        }
       })
     // console.log(jobPosting)
     res.status(200).json({message: "OK", jobPosting})
