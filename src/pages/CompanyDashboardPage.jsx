@@ -42,6 +42,7 @@ function CompanyDashboardPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [isEditJobOpen, setIsEditJobOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
+  const [isScheduleInterviewOpen, setIsScheduleInterviewOpen] = useState(false);
   const navigate = useNavigate();
   const URL = "http://localhost:3000";
 
@@ -58,6 +59,7 @@ function CompanyDashboardPage() {
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [parsedData, setParsedData] = useState(null);
   const [user, setUser] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   
   const [createJobPosting, setCreateJobPosting] = useState({
     title: "",
@@ -66,6 +68,15 @@ function CompanyDashboardPage() {
     type: "",
     salaryMin: "",
     salaryMax: ""
+  });
+
+  // Schedule Interview form state
+  const [scheduleInterview, setScheduleInterview] = useState({
+    interviewDate: "",
+    interviewTime: "",
+    interviewType: "virtual",
+    meetingLink: "",
+    notes: ""
   });
 
   // Job postings state
@@ -109,6 +120,20 @@ function CompanyDashboardPage() {
     return errors;
   };
 
+  // Schedule Interview validation
+  const validateInterviewForm = (formData) => {
+    const errors = {};
+    
+    if (!formData.interviewDate) errors.interviewDate = "Interview date is required";
+    if (!formData.interviewTime) errors.interviewTime = "Interview time is required";
+    if (!formData.interviewType) errors.interviewType = "Interview type is required";
+    if (formData.interviewType === "virtual" && !formData.meetingLink?.trim()) {
+      errors.meetingLink = "Meeting link is required for virtual interviews";
+    }
+    
+    return errors;
+  };
+
   // Update applicant status function - FIXED
   const updateApplicantStatus = async (applicantId, newStatus) => {
     const token = localStorage.getItem("token");
@@ -129,6 +154,56 @@ function CompanyDashboardPage() {
       console.log("Error updating applicant status:", err.message);
       alert("Error updating applicant status. Please try again.");
       return false;
+    }
+  };
+
+  // Schedule Interview function
+  const handleScheduleInterview = async (e) => {
+    e.preventDefault();
+    
+    const errors = validateInterviewForm(scheduleInterview);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    if (!selectedApplicant) return;
+
+    const token = localStorage.getItem("token");
+    try {
+      // First update the applicant status to 'interviewed'
+      const applicantId = selectedApplicant.applicantId || selectedApplicant.id || selectedApplicant.userID;
+      await updateApplicantStatus(applicantId, 'interviewed');
+
+      // Then send the interview details (you might want to save this to your backend)
+      const interviewData = {
+        applicantId: applicantId,
+        applicantName: selectedApplicant.name,
+        position: selectedApplicant.position,
+        ...scheduleInterview,
+        scheduledAt: new Date().toISOString()
+      };
+
+      // Here you would typically send this to your backend
+      console.log("Scheduling interview:", interviewData);
+      
+      // For now, we'll just show an alert
+      alert(`Interview scheduled successfully for ${selectedApplicant.name} on ${scheduleInterview.interviewDate} at ${scheduleInterview.interviewTime}`);
+      
+      // Reset form and close drawer
+      setScheduleInterview({
+        interviewDate: "",
+        interviewTime: "",
+        interviewType: "virtual",
+        meetingLink: "",
+        notes: ""
+      });
+      setFormErrors({});
+      setIsScheduleInterviewOpen(false);
+      
+    } catch (error) {
+      console.error("Error scheduling interview:", error);
+      alert("Error scheduling interview. Please try again.");
     }
   };
 
@@ -185,6 +260,22 @@ function CompanyDashboardPage() {
     }
   };
 
+  const handleInterviewChange = (e) => {
+    const { name, value } = e.target;
+    setScheduleInterview({
+      ...scheduleInterview,
+      [name]: value
+    });
+    
+    // Clear error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: ''
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -209,7 +300,7 @@ function CompanyDashboardPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      alert("Job post created successfully! Please standby and wait for the admin’s approval before it is officially posted on the Job Seeker side.");
+      alert("Job post created successfully! Please standby and wait for the admin's approval before it is officially posted on the Job Seeker side.");
 
       if (result.data && result.data.job) {
         setJobPostings(prev => [...prev, result.data.job]);
@@ -266,13 +357,21 @@ function CompanyDashboardPage() {
           setUser(result.data);
           setJobPostings(result.data.jobPostings || []);
           
+          // FIXED: Properly extract applicants from jobPostings
           const allApplicants = result.data.jobPostings?.flatMap(job => 
-            job.applicants?.map(applicant => ({
+            (job.applicants || []).map(applicant => ({
               ...applicant,
-              applicantId: applicant.id, // Ensure consistent ID
+              applicantId: applicant.id || applicant.applicantId, // Use consistent ID
               jobId: job.id,
-              position: job.title
-            })) || []
+              position: job.title,
+              // Ensure all required fields have fallbacks
+              name: applicant.name || 'Unknown Applicant',
+              email: applicant.email || '',
+              status: applicant.status || 'pending',
+              // Use createdAt from database for applied date
+              appliedDate: applicant.createdAt ? new Date(applicant.createdAt).toLocaleDateString() : 'Not specified',
+              createdAt: applicant.createdAt || applicant.appliedDate || new Date().toISOString()
+            }))
           ) || [];
           
           console.log("Extracted applicants:", allApplicants);
@@ -281,10 +380,19 @@ function CompanyDashboardPage() {
       } catch (error) {
         console.error("Error fetching data:", error);
         navigate("/login")
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchData();
   }, [navigate]);
+
+  // Add debug effect to check data flow
+  useEffect(() => {
+    console.log("Job Postings:", jobPostings);
+    console.log("Applicants:", applicants);
+    console.log("Stats:", stats);
+  }, [jobPostings, applicants]);
 
   // Fetch applicants for a specific job from backend - FIXED
   const fetchJobApplicants = async (jobId) => {
@@ -299,7 +407,9 @@ function CompanyDashboardPage() {
         ...applicant,
         applicantId: applicant.id, // Store the applicant ID consistently
         jobId: jobId,
-        position: response.data.job?.title || selectedJob?.title || ""
+        position: response.data.job?.title || selectedJob?.title || "",
+        // Use createdAt from database for applied date
+        appliedDate: applicant.createdAt ? new Date(applicant.createdAt).toLocaleDateString() : 'Not specified'
       }));
 
       return applicantsWithIds;
@@ -380,14 +490,16 @@ function CompanyDashboardPage() {
     }
   };
 
-  // Calculate statistics based on real data
+  // Calculate statistics based on real data - IMPROVED
   const stats = {
     totalJobs: jobPostings.length,
     totalApplicants: applicants.length,
-    pendingApplications: applicants.filter(a => a.status === 'pending').length,
+    pendingApplications: applicants.filter(a => a.status === 'pending' || !a.status).length,
     shortlistedCandidates: applicants.filter(a => a.status === 'shortlisted').length,
     interviewedCandidates: applicants.filter(a => a.status === 'interviewed').length,
-    hiredCandidates: applicants.filter(a => a.status === 'hired').length
+    hiredCandidates: applicants.filter(a => a.status === 'hired').length,
+    rejectedCandidates: applicants.filter(a => a.status === 'rejected').length,
+    pendingJobPostings: jobPostings.filter(job => !job.reviewed || job.status === 'pending').length
   }
 
   // Chart data based on real applicants
@@ -396,7 +508,7 @@ function CompanyDashboardPage() {
     { name: 'Shortlisted', value: stats.shortlistedCandidates, fill: '#3b82f6' },
     { name: 'Interviewed', value: stats.interviewedCandidates, fill: '#8b5cf6' },
     { name: 'Hired', value: stats.hiredCandidates, fill: '#10b981' },
-    { name: 'Rejected', value: applicants.filter(a => a.status === 'rejected').length, fill: '#ef4444' }
+    { name: 'Rejected', value: stats.rejectedCandidates, fill: '#ef4444' }
   ]
 
   // Job performance data based on real applicants
@@ -603,11 +715,11 @@ function CompanyDashboardPage() {
       },
     },
     {
-      accessorKey: "createdAt",
+      accessorKey: "appliedDate",
       header: "Applied Date",
       cell: ({ row }) => {
-        const createdAt = row.getValue("createdAt");
-        return <div>{createdAt ? new Date(createdAt).toLocaleDateString() : 'Not specified'}</div>;
+        const appliedDate = row.getValue("appliedDate");
+        return <div>{appliedDate || 'Not specified'}</div>;
       },
     },
     {
@@ -818,178 +930,227 @@ function CompanyDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Jobs</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalJobs}</div>
-            <p className="text-xs text-muted-foreground">
-              {jobPostings.filter(job => job.status === 'active').length} active
-            </p>
-          </CardContent>
-        </Card>
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <Card key={item} className="shadow-lg border-0">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Jobs</CardTitle>
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalJobs}</div>
+                <p className="text-xs text-muted-foreground">
+                  {jobPostings.filter(job => job.status === 'active').length} active
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Applicants</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalApplicants}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all job postings
-            </p>
-          </CardContent>
-        </Card>
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Applicants</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalApplicants}</div>
+                <p className="text-xs text-muted-foreground">
+                  Across all job postings
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <Clock3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingApplications}</div>
-            <p className="text-xs text-muted-foreground">
-              Need immediate attention
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Shortlisted</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.shortlistedCandidates}</div>
-            <p className="text-xs text-muted-foreground">
-              Ready for interviews
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle>Application Status Overview</CardTitle>
-            <CardDescription>Distribution of applications by status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-64">
-              <PieChart>
-                <Pie
-                  data={applicationStatusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {applicationStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle>Top Performing Jobs</CardTitle>
-            <CardDescription>Jobs with highest application rates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-64">
-              <BarChart data={jobPerformanceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 12 }}
-                  tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar 
-                  dataKey="applications" 
-                  fill="var(--color-applications)" 
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ChartContainer>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              {jobPerformanceData.map((job, index) => (
-                <div key={index} className="p-2 bg-blue-50 rounded">
-                  <div className="text-sm font-bold text-blue-600">{job.applications}</div>
-                  <div className="text-xs text-blue-600 truncate">{job.name}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Applications */}
-      <Card className="shadow-lg border-0">
-        <CardHeader>
-          <CardTitle>Recent Applications</CardTitle>
-          <CardDescription>Latest applications that need your attention</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {applicants.slice(0, 3).map((applicant) => (
-              <div key={applicant.applicantId || applicant.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">{applicant.name}</h4>
-                    <p className="text-sm text-muted-foreground">{applicant.position}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {getStatusBadge(applicant.status)}
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleApplicantClick(applicant)}
-                    className="hover:bg-blue-50 border-blue-200"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {applicants.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No applicants yet</p>
-                <Button 
-                  onClick={() => setActiveView('create-job-posting')}
-                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Job Posting
-                </Button>
-              </div>
-            )}
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Shortlisted</CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.shortlistedCandidates}</div>
+                <p className="text-xs text-muted-foreground">
+                  Ready for interviews
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Additional Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Job Postings</CardTitle>
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-600">{stats.pendingJobPostings}</div>
+                <p className="text-xs text-muted-foreground">
+                  Awaiting admin approval
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Rejected Applicants</CardTitle>
+                <XCircle className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{stats.rejectedCandidates}</div>
+                <p className="text-xs text-muted-foreground">
+                  Not selected for position
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Hired Candidates</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.hiredCandidates}</div>
+                <p className="text-xs text-muted-foreground">
+                  Successfully hired
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Application Status Overview</CardTitle>
+                <CardDescription>Distribution of applications by status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-64">
+                  <PieChart>
+                    <Pie
+                      data={applicationStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {applicationStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-0">
+              <CardHeader>
+                <CardTitle>Top Performing Jobs</CardTitle>
+                <CardDescription>Jobs with highest application rates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-64">
+                  <BarChart data={jobPerformanceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 12 }}
+                      tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar 
+                      dataKey="applications" 
+                      fill="var(--color-applications)" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ChartContainer>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  {jobPerformanceData.map((job, index) => (
+                    <div key={index} className="p-2 bg-blue-50 rounded">
+                      <div className="text-sm font-bold text-blue-600">{job.applications}</div>
+                      <div className="text-xs text-blue-600 truncate">{job.name}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Applications */}
+          <Card className="shadow-lg border-0">
+            <CardHeader>
+              <CardTitle>Recent Applications</CardTitle>
+              <CardDescription>Latest applications that need your attention</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {applicants.slice(0, 3).map((applicant) => (
+                  <div key={applicant.applicantId || applicant.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{applicant.name}</h4>
+                        <p className="text-sm text-muted-foreground">{applicant.position}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {getStatusBadge(applicant.status)}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleApplicantClick(applicant)}
+                        className="hover:bg-blue-50 border-blue-200"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {applicants.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No applicants yet</p>
+                    <Button 
+                      onClick={() => setActiveView('create-job-posting')}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Job Posting
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 
@@ -1733,6 +1894,171 @@ function CompanyDashboardPage() {
     );
   };
 
+  const renderScheduleInterviewForm = () => {
+    if (!selectedApplicant) return null;
+
+    return (
+      <Drawer open={isScheduleInterviewOpen} onOpenChange={setIsScheduleInterviewOpen}>
+        <DrawerContent className="max-h-[90vh] flex flex-col">
+          {/* Fixed header */}
+          <DrawerHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
+            <DrawerTitle className="text-2xl font-bold">Schedule Interview</DrawerTitle>
+            <DrawerDescription className="text-lg">
+              Schedule an interview for {selectedApplicant.name} - {selectedApplicant.position}
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              <form onSubmit={handleScheduleInterview} className="space-y-6">
+                {/* Interview Date and Time */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Interview Date *</label>
+                    <Input
+                      type="date"
+                      name="interviewDate"
+                      value={scheduleInterview.interviewDate}
+                      onChange={handleInterviewChange}
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      className={formErrors.interviewDate ? "border-red-500 bg-red-50" : ""}
+                    />
+                    {formErrors.interviewDate && (
+                      <p className="text-red-500 text-sm flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {formErrors.interviewDate}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Interview Time *</label>
+                    <Input
+                      type="time"
+                      name="interviewTime"
+                      value={scheduleInterview.interviewTime}
+                      onChange={handleInterviewChange}
+                      required
+                      className={formErrors.interviewTime ? "border-red-500 bg-red-50" : ""}
+                    />
+                    {formErrors.interviewTime && (
+                      <p className="text-red-500 text-sm flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {formErrors.interviewTime}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Interview Type */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Interview Type *</label>
+                  <Select 
+                    value={scheduleInterview.interviewType} 
+                    onValueChange={(value) => {
+                      setScheduleInterview({...scheduleInterview, interviewType: value});
+                      if (formErrors.interviewType) {
+                        setFormErrors({...formErrors, interviewType: ''});
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={formErrors.interviewType ? "border-red-500 bg-red-50" : ""}>
+                      <SelectValue placeholder="Select interview type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="virtual">Virtual (Online)</SelectItem>
+                      <SelectItem value="in-person">In-Person</SelectItem>
+                      <SelectItem value="phone">Phone Interview</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.interviewType && (
+                    <p className="text-red-500 text-sm flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {formErrors.interviewType}
+                    </p>
+                  )}
+                </div>
+
+                {/* Meeting Link (only for virtual interviews) */}
+                {scheduleInterview.interviewType === "virtual" && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Meeting Link *</label>
+                    <Input
+                      type="url"
+                      name="meetingLink"
+                      placeholder="https://meet.google.com/xxx-xxxx-xxx or Zoom link"
+                      value={scheduleInterview.meetingLink}
+                      onChange={handleInterviewChange}
+                      className={formErrors.meetingLink ? "border-red-500 bg-red-50" : ""}
+                    />
+                    {formErrors.meetingLink && (
+                      <p className="text-red-500 text-sm flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {formErrors.meetingLink}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Additional Notes */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Additional Notes</label>
+                  <Textarea
+                    name="notes"
+                    placeholder="Any special instructions, topics to cover, or additional information for the candidate..."
+                    value={scheduleInterview.notes}
+                    onChange={handleInterviewChange}
+                    rows={4}
+                  />
+                </div>
+
+                {/* Interview Summary */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-2">Interview Summary</h4>
+                  <div className="space-y-1 text-sm text-blue-800">
+                    <p><strong>Candidate:</strong> {selectedApplicant.name}</p>
+                    <p><strong>Position:</strong> {selectedApplicant.position}</p>
+                    {scheduleInterview.interviewDate && (
+                      <p><strong>Date:</strong> {new Date(scheduleInterview.interviewDate).toLocaleDateString()}</p>
+                    )}
+                    {scheduleInterview.interviewTime && (
+                      <p><strong>Time:</strong> {scheduleInterview.interviewTime}</p>
+                    )}
+                    {scheduleInterview.interviewType && (
+                      <p><strong>Type:</strong> {scheduleInterview.interviewType}</p>
+                    )}
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          
+          {/* Fixed footer with buttons - always visible */}
+          <DrawerFooter className="px-6 pb-6 pt-4 border-t bg-white flex-shrink-0">
+            <div className="flex gap-3 w-full">
+              <Button 
+                onClick={handleScheduleInterview}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 text-base"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Schedule Interview
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setIsScheduleInterviewOpen(false)}
+                className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
@@ -1880,10 +2206,7 @@ function CompanyDashboardPage() {
                           <span className="text-sm font-medium">Applied Date:</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {selectedApplicant.appliedDate || selectedApplicant.createdAt ? 
-                            new Date(selectedApplicant.appliedDate || selectedApplicant.createdAt).toLocaleDateString() : 
-                            'Not specified'
-                          }
+                          {selectedApplicant.appliedDate || 'Not specified'}
                         </p>
                       </div>
                     </div>
@@ -1931,7 +2254,10 @@ function CompanyDashboardPage() {
               </div>
               <DrawerFooter>
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button 
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => setIsScheduleInterviewOpen(true)}
+                  >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Schedule Interview
                   </Button>
@@ -1981,6 +2307,9 @@ function CompanyDashboardPage() {
 
         {/* Edit Job Drawer */}
         {renderEditJobForm()}
+
+        {/* Schedule Interview Drawer */}
+        {renderScheduleInterviewForm()}
       </div>
     </SidebarProvider>
   );
