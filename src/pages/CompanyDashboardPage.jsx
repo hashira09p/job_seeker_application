@@ -280,7 +280,7 @@ function CompanyDashboardPage() {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
-        alert("Error loading dashboard data");
+        navigate("/login")
       }
     }
     fetchData();
