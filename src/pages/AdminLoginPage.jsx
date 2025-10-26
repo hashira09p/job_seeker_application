@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail, Lock, Shield, AlertTriangle, Server, Key, Eye, EyeOff, UserPlus, User } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from "axios"
 
 function AdminLoginPage() {
   const URL = "http://localhost:4000";
+  const token = localStorage.getItem("adminToken")
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     firstName: "",
@@ -29,6 +30,16 @@ function AdminLoginPage() {
       return formData.email && formData.password;
     }
   };
+
+  useEffect(() => {
+    async function authenticate() {
+      if (token){
+        navigate("/admin")
+      }
+    }
+    
+    authenticate()
+  }, [])
 
   const handleChange = (e) => {
     setFormData({
