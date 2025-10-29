@@ -42,7 +42,6 @@ function CompanyDashboardPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [isEditJobOpen, setIsEditJobOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
-  const [isScheduleInterviewOpen, setIsScheduleInterviewOpen] = useState(false);
   const navigate = useNavigate();
   const URL = "http://localhost:3000";
 
@@ -68,15 +67,6 @@ function CompanyDashboardPage() {
     type: "",
     salaryMin: "",
     salaryMax: ""
-  });
-
-  // Schedule Interview form state
-  const [scheduleInterview, setScheduleInterview] = useState({
-    interviewDate: "",
-    interviewTime: "",
-    interviewType: "virtual",
-    meetingLink: "",
-    notes: ""
   });
 
   // Job postings state
@@ -120,20 +110,6 @@ function CompanyDashboardPage() {
     return errors;
   };
 
-  // Schedule Interview validation
-  const validateInterviewForm = (formData) => {
-    const errors = {};
-    
-    if (!formData.interviewDate) errors.interviewDate = "Interview date is required";
-    if (!formData.interviewTime) errors.interviewTime = "Interview time is required";
-    if (!formData.interviewType) errors.interviewType = "Interview type is required";
-    if (formData.interviewType === "virtual" && !formData.meetingLink?.trim()) {
-      errors.meetingLink = "Meeting link is required for virtual interviews";
-    }
-    
-    return errors;
-  };
-
   // Update applicant status function - FIXED
   const updateApplicantStatus = async (applicantId, newStatus) => {
     const token = localStorage.getItem("token");
@@ -154,56 +130,6 @@ function CompanyDashboardPage() {
       console.log("Error updating applicant status:", err.message);
       alert("Error updating applicant status. Please try again.");
       return false;
-    }
-  };
-
-  // Schedule Interview function
-  const handleScheduleInterview = async (e) => {
-    e.preventDefault();
-    
-    const errors = validateInterviewForm(scheduleInterview);
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    if (!selectedApplicant) return;
-
-    const token = localStorage.getItem("token");
-    try {
-      // First update the applicant status to 'interviewed'
-      const applicantId = selectedApplicant.applicantId || selectedApplicant.id || selectedApplicant.userID;
-      await updateApplicantStatus(applicantId, 'interviewed');
-
-      // Then send the interview details (you might want to save this to your backend)
-      const interviewData = {
-        applicantId: applicantId,
-        applicantName: selectedApplicant.name,
-        position: selectedApplicant.position,
-        ...scheduleInterview,
-        scheduledAt: new Date().toISOString()
-      };
-
-      // Here you would typically send this to your backend
-      console.log("Scheduling interview:", interviewData);
-      
-      // For now, we'll just show an alert
-      alert(`Interview scheduled successfully for ${selectedApplicant.name} on ${scheduleInterview.interviewDate} at ${scheduleInterview.interviewTime}`);
-      
-      // Reset form and close drawer
-      setScheduleInterview({
-        interviewDate: "",
-        interviewTime: "",
-        interviewType: "virtual",
-        meetingLink: "",
-        notes: ""
-      });
-      setFormErrors({});
-      setIsScheduleInterviewOpen(false);
-      
-    } catch (error) {
-      console.error("Error scheduling interview:", error);
-      alert("Error scheduling interview. Please try again.");
     }
   };
 
@@ -248,22 +174,6 @@ function CompanyDashboardPage() {
     const { name, value } = e.target;
     setCreateJobPosting({
       ...createJobPosting,
-      [name]: value
-    });
-    
-    // Clear error when user starts typing
-    if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
-        [name]: ''
-      });
-    }
-  };
-
-  const handleInterviewChange = (e) => {
-    const { name, value } = e.target;
-    setScheduleInterview({
-      ...scheduleInterview,
       [name]: value
     });
     
@@ -1894,171 +1804,6 @@ function CompanyDashboardPage() {
     );
   };
 
-  const renderScheduleInterviewForm = () => {
-    if (!selectedApplicant) return null;
-
-    return (
-      <Drawer open={isScheduleInterviewOpen} onOpenChange={setIsScheduleInterviewOpen}>
-        <DrawerContent className="max-h-[90vh] flex flex-col">
-          {/* Fixed header */}
-          <DrawerHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
-            <DrawerTitle className="text-2xl font-bold">Schedule Interview</DrawerTitle>
-            <DrawerDescription className="text-lg">
-              Schedule an interview for {selectedApplicant.name} - {selectedApplicant.position}
-            </DrawerDescription>
-          </DrawerHeader>
-          
-          {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6 space-y-6">
-              <form onSubmit={handleScheduleInterview} className="space-y-6">
-                {/* Interview Date and Time */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Interview Date *</label>
-                    <Input
-                      type="date"
-                      name="interviewDate"
-                      value={scheduleInterview.interviewDate}
-                      onChange={handleInterviewChange}
-                      required
-                      min={new Date().toISOString().split('T')[0]}
-                      className={formErrors.interviewDate ? "border-red-500 bg-red-50" : ""}
-                    />
-                    {formErrors.interviewDate && (
-                      <p className="text-red-500 text-sm flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {formErrors.interviewDate}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Interview Time *</label>
-                    <Input
-                      type="time"
-                      name="interviewTime"
-                      value={scheduleInterview.interviewTime}
-                      onChange={handleInterviewChange}
-                      required
-                      className={formErrors.interviewTime ? "border-red-500 bg-red-50" : ""}
-                    />
-                    {formErrors.interviewTime && (
-                      <p className="text-red-500 text-sm flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {formErrors.interviewTime}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Interview Type */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Interview Type *</label>
-                  <Select 
-                    value={scheduleInterview.interviewType} 
-                    onValueChange={(value) => {
-                      setScheduleInterview({...scheduleInterview, interviewType: value});
-                      if (formErrors.interviewType) {
-                        setFormErrors({...formErrors, interviewType: ''});
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={formErrors.interviewType ? "border-red-500 bg-red-50" : ""}>
-                      <SelectValue placeholder="Select interview type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="virtual">Virtual (Online)</SelectItem>
-                      <SelectItem value="in-person">In-Person</SelectItem>
-                      <SelectItem value="phone">Phone Interview</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formErrors.interviewType && (
-                    <p className="text-red-500 text-sm flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {formErrors.interviewType}
-                    </p>
-                  )}
-                </div>
-
-                {/* Meeting Link (only for virtual interviews) */}
-                {scheduleInterview.interviewType === "virtual" && (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Meeting Link *</label>
-                    <Input
-                      type="url"
-                      name="meetingLink"
-                      placeholder="https://meet.google.com/xxx-xxxx-xxx or Zoom link"
-                      value={scheduleInterview.meetingLink}
-                      onChange={handleInterviewChange}
-                      className={formErrors.meetingLink ? "border-red-500 bg-red-50" : ""}
-                    />
-                    {formErrors.meetingLink && (
-                      <p className="text-red-500 text-sm flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {formErrors.meetingLink}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Additional Notes */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Additional Notes</label>
-                  <Textarea
-                    name="notes"
-                    placeholder="Any special instructions, topics to cover, or additional information for the candidate..."
-                    value={scheduleInterview.notes}
-                    onChange={handleInterviewChange}
-                    rows={4}
-                  />
-                </div>
-
-                {/* Interview Summary */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-2">Interview Summary</h4>
-                  <div className="space-y-1 text-sm text-blue-800">
-                    <p><strong>Candidate:</strong> {selectedApplicant.name}</p>
-                    <p><strong>Position:</strong> {selectedApplicant.position}</p>
-                    {scheduleInterview.interviewDate && (
-                      <p><strong>Date:</strong> {new Date(scheduleInterview.interviewDate).toLocaleDateString()}</p>
-                    )}
-                    {scheduleInterview.interviewTime && (
-                      <p><strong>Time:</strong> {scheduleInterview.interviewTime}</p>
-                    )}
-                    {scheduleInterview.interviewType && (
-                      <p><strong>Type:</strong> {scheduleInterview.interviewType}</p>
-                    )}
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-          
-          {/* Fixed footer with buttons - always visible */}
-          <DrawerFooter className="px-6 pb-6 pt-4 border-t bg-white flex-shrink-0">
-            <div className="flex gap-3 w-full">
-              <Button 
-                onClick={handleScheduleInterview}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 text-base"
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Schedule Interview
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setIsScheduleInterviewOpen(false)}
-                className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-            </div>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  };
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
@@ -2255,15 +2000,18 @@ function CompanyDashboardPage() {
               <DrawerFooter>
                 <div className="flex gap-2">
                   <Button 
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={() => setIsScheduleInterviewOpen(true)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => {
+                      console.log("Hiring applicant:", selectedApplicant);
+                      handleStatusUpdate('hired');
+                    }}
                   >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Schedule Interview
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Hire Candidate
                   </Button>
                   <Button 
                     variant="outline" 
-                    className="flex-1 border-green-200 hover:bg-green-50 text-green-700" 
+                    className="flex-1 border-blue-200 hover:bg-blue-50 text-blue-700" 
                     onClick={() => {
                       console.log("Shortlisting applicant:", selectedApplicant);
                       handleStatusUpdate('shortlisted');
@@ -2307,9 +2055,6 @@ function CompanyDashboardPage() {
 
         {/* Edit Job Drawer */}
         {renderEditJobForm()}
-
-        {/* Schedule Interview Drawer */}
-        {renderScheduleInterviewForm()}
       </div>
     </SidebarProvider>
   );

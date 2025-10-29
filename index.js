@@ -96,8 +96,8 @@ app.get("/auth/google/app",
 )
 
 
-// Register
-app.post("/submit-register", async (req, res) => {
+// Signup
+app.post("/submit-signup", async (req, res) => {
   try {
     const { firstName, lastName, description, companyName, email,password, role, industry,  website, arrangement} = req.body;
 
@@ -159,7 +159,6 @@ app.post("/submit-register", async (req, res) => {
   }
 });
 
-
 //Login
 app.post("/submit-login", async(req, res) => {
   const {email, password} = req.body
@@ -207,7 +206,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
     });
 
     if (user.role == "User") {
-      res.status(200).json({ role: user.role });
+      res.status(400).json({ role: user.role });
       return;
     }
 
@@ -225,7 +224,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
       include: [{
         model: Applicants,
         as: "applicants",
-        attributes: ["id"]
+        attributes: ["id", "status", "createdAt"]
       }]
     });
 
@@ -275,6 +274,7 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
       ]
     });
 
+    console.log(applicants)
     res.status(200).json({
       message:"OK",
       applicants: applicants
