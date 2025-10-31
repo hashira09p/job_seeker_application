@@ -10,7 +10,8 @@ Documents.init({
   },
   docType: DataTypes.STRING,
   fileDir: DataTypes.STRING,
-  fileName: DataTypes.STRING
+  fileName: DataTypes.STRING,
+  deletedAt: DataTypes.DATE
 }, {
   sequelize,
   modelName: 'Documents',

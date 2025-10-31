@@ -6,7 +6,7 @@ import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import Breadcrumb from '@/components/Breadcrumb'
 import { useAuth } from '@/contexts/AuthContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from "axios"
 
 
@@ -18,9 +18,21 @@ function LoginPage() {
     password: ""
   });
 
+  const token = localStorage.getItem("token")
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    async function authenticate() {
+      if (token){
+        navigate("/")
+      }
+    }
+  
+    authenticate()
+  }, [])
+  
   const handleChange = (e) => {
     setFormData({
       ...formData,

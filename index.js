@@ -16,7 +16,6 @@ import multer from "multer"
 import fs from "fs"
 import path from 'path';
 
-
 dotenv.config()
 
 const {Users, Companies, JobPostings, Documents, Applicants} = db
@@ -97,8 +96,8 @@ app.get("/auth/google/app",
 )
 
 
-// Register
-app.post("/submit-register", async (req, res) => {
+// Signup
+app.post("/submit-signup", async (req, res) => {
   try {
     const { firstName, lastName, description, companyName, email,password, role, industry,  website, arrangement} = req.body;
 
@@ -160,7 +159,6 @@ app.post("/submit-register", async (req, res) => {
   }
 });
 
-
 //Login
 app.post("/submit-login", async(req, res) => {
   const {email, password} = req.body
@@ -172,7 +170,7 @@ app.post("/submit-login", async(req, res) => {
       }
     })
     
-    const role = user.role
+    
 
     console.log(user)
     
@@ -180,6 +178,8 @@ app.post("/submit-login", async(req, res) => {
       console.log("User not registered.")
       return res.status(400).json({success:false, message: "unregistered"})
     }
+
+    const role = user.role
 
     await bcrypt.compare(password, user.password, async(err, result) => {
       //this console.log will say false if it is wrong password
@@ -206,7 +206,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
     });
 
     if (user.role == "User") {
-      res.status(200).json({ role: user.role });
+      res.status(400).json({ role: user.role });
       return;
     }
 
@@ -224,7 +224,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
       include: [{
         model: Applicants,
         as: "applicants",
-        attributes: ["id"]
+        attributes: ["id", "status", "createdAt"]
       }]
     });
 
@@ -238,6 +238,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
       createdAt: job.createdAt,
+      reviewed: job.reviewed,
       applicants: job.applicants ? job.applicants : []
     }));
 
@@ -260,6 +261,7 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
       where: {
         JobPostingId: JobPostingId // Match your model's field name
       },
+      attributes: ['id', 'name', 'email', 'coverLetter', 'phone', 'JobPostingId', 'userID', 'status'],
       include: [
         {
           model: Users,
@@ -272,6 +274,7 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
       ]
     });
 
+    console.log(applicants)
     res.status(200).json({
       message:"OK",
       applicants: applicants
@@ -281,10 +284,29 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
   }
 })
 
+//Update the status of applicants from Employer Side
+app.patch("/applicants/:id", authenticateToken, async(req,res) => {
+  const applicantId = req.params.id
+  const status = req.body.status
+  try{
+    const result = Applicants.update({
+      status: status
+    },{
+      where:{
+        id: applicantId
+      }
+    })
+
+    res.status(200).json({message: "Ok"})
+  }catch(err){
+    res.status(400).json({message: err.message})
+  }
+})
+
 app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
   const {title, description, location, type, salaryMin, salaryMax} = req.body
 
-  console.log(title, description, location, type, salaryMin, salaryMax)
+  // console.log(title, description, location, type, salaryMin, salaryMax)
 
   const company = await Companies.findOne({
     where:{
@@ -301,10 +323,11 @@ app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
       companyID: company.id,
       salaryMin: salaryMin,
       salaryMax: salaryMax,
-      status: "active"
+      status: "active",
+      reviewed: false
     })
 
-    console.log(result)
+    // console.log(result)
     res.status(200).json({message:"OK", job:result})
   }catch(err){
     console.log(err.message)
@@ -324,13 +347,13 @@ app.patch("/jobPostings/:id", authenticateToken, async(req,res) => {
       type: type,
       status: status,
       salaryMin: salaryMin,
-      salaryMax:salaryMax,},
-      
-      {
-        where:{
+      salaryMax:salaryMax,
+    },
+    {
+      where:{
         id: jobPostingID
       }
-      })
+    })
 
     res.status(200).json({message:"OK"})
   }catch(err){
@@ -370,11 +393,14 @@ app.get("/jobs", async(req, res) => {
   try{
     const jobPosting = await JobPostings.findAll(
       {
+        where:{
+          reviewed: true
+        },
         include:{
           model:Companies,
           as:"company",
           attributes:['name', "industry"]
-          }
+        }
       })
     // console.log(jobPosting)
     res.status(200).json({message: "OK", jobPosting})
@@ -385,8 +411,6 @@ app.get("/jobs", async(req, res) => {
 
 //Saving the resume to backend
 app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(req, res) => {
-  console.log("Hello")
-  console.log(req.file)
   const {filename, destination} = req.file
   
   try{
@@ -405,20 +429,23 @@ app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(r
   }
 })
 
-//getting the resume from backend
+//getting the resume from lcoalStorage 
 app.get("/getResume", authenticateToken, async(req, res) => {
   try{
-    const result = await Documents.findOne({
+    const documents = await Documents.findAll({
       where:{
         userID: req.user.id
       }
     })
-    res.status(200).json({message: "Saved Success", resumePath: result.fileDir})
+
+    console.log(documents)
+    res.status(200).json({message: "Saved Success", documents: documents})
   }catch(err){
     console.log(err.message)
   }
 })
 
+//Download Resume from localstorage and delete the file directory from database
 app.get("/downloadResume", authenticateToken, async(req, res) => {
   try {
     const result = await Documents.findOne({
@@ -438,10 +465,23 @@ app.get("/downloadResume", authenticateToken, async(req, res) => {
       return res.status(404).json({ message: "File not found on server" });
     }
 
-    // Set proper headers for file download
+    // Get file extension and set appropriate Content-Type
+    const fileExtension = path.extname(filePath).toLowerCase();
     const fileName = path.basename(filePath);
+    
+    let contentType = 'application/octet-stream'; // Default fallback
+    
+    if (fileExtension === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (fileExtension === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (fileExtension === '.doc') {
+      contentType = 'application/msword';
+    }
+
+    // Set proper headers for file download
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Type', contentType);
 
     // Stream the file to the response
     const fileStream = fs.createReadStream(filePath);
@@ -453,6 +493,77 @@ app.get("/downloadResume", authenticateToken, async(req, res) => {
   }
 });
 
+//Download the resume in the applicants. This is employer side.
+app.get("/applicants/resume/:id", authenticateToken, async(req, res) => {
+  const applicantDocumentId = req.params.id;
+
+  try {
+    const result = await Documents.findOne({
+      where: { id: applicantDocumentId }
+    });
+    
+    if (!result || !result.fileDir) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    // Use process.cwd() instead of __dirname
+    const filePath = path.join(process.cwd(), result.fileDir);
+
+    console.log(filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found on server" });
+    }
+
+    // Get file extension and set appropriate Content-Type
+    const fileExtension = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath);
+    
+    let contentType = 'application/octet-stream'; // Default fallback
+    
+    if (fileExtension === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (fileExtension === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (fileExtension === '.doc') {
+      contentType = 'application/msword';
+    }
+
+    // Set proper headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', contentType);
+
+    // Stream the file to the response
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+  } catch(err) {
+    console.log(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
+  const documentId = req.params.id;
+  
+  try{
+    const document = await Documents.update({
+      deletedAt: Date.now()
+    },
+  {
+    where:{
+      id: documentId
+    }
+  })
+
+    res.status(200).json({message: "Ok"})
+  }catch(err){
+    console.log(err.message)
+    res.status(400).json({message: err.message})
+  }
+})
+
 //Passing application for User side
 app.post("/application-submit", authenticateToken, async(req, res) => {
   const {fullName, email, phone, coverLetter, jobPostingID} = req.body
@@ -460,7 +571,6 @@ app.post("/application-submit", authenticateToken, async(req, res) => {
 
   console.log(jobPostingID)
   
-
   try{
     const document = await Documents.findOne({
       where:{
@@ -488,6 +598,8 @@ app.post("/application-submit", authenticateToken, async(req, res) => {
     res.status(400).json({message: "Upload your resume first in upload page"})
   }
 })
+
+
 
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,

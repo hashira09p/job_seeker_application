@@ -6,11 +6,12 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import Breadcrumb from "@/components/Breadcrumb";
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function SignupPage() {
   const URL = "http://localhost:3000";
   const navigate = useNavigate();
+  const token = localStorage.getItem("token")
 
   const [role, setRole] = useState("None");
   const [formData, setFormData] = useState({
@@ -26,6 +27,16 @@ function SignupPage() {
     arrangement: ""
   });
 
+  useEffect(() => {
+    async function authenticate() {
+      if (token){
+        navigate("/")
+      }
+    }
+
+    authenticate()
+  }, [])
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -37,7 +48,7 @@ function SignupPage() {
     e.preventDefault();
     try {
       const result = await axios({
-        url: `${URL}/submit-register`,
+        url: `${URL}/submit-signup`,
         method: "post",
         data: {
           firstName: formData.firstName,
@@ -142,7 +153,7 @@ function SignupPage() {
                   Create your account
                 </h1>
                 <p className="text-muted-foreground">
-                  Create your account as "User"
+                  Create your account as "Job Seeker"
                 </p>
               </div>
 
