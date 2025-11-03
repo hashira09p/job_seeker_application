@@ -9,7 +9,8 @@ Users.init({
     email: DataTypes.STRING,
     password: DataTypes.STRING,
     role: DataTypes.STRING,
-    fullName: DataTypes.STRING
+    fullName: DataTypes.STRING,
+    approved: DataTypes.STRING
 },{
     sequelize,
     modelName: "Users",

@@ -155,26 +155,56 @@ app.get("/fetchData", authenticateToken, async(req, res) => {
       }
     })
 
-    const employers = await Users.findAll({
-      where:{
-        role: "Employer"
-      }
-    })
+    const employersDocuments = await Documents.findAll({
+      include: [{
+        model: Users,
+        as: "user",
+        attributes: ["id", "firstName", "lastName", "email", "role", "fullName",    "approved"],
+        where: { role: "Employer" } // Filter by user role
+      }]
+    });
 
     const jobPostings = await JobPostings.findAll({
-      include:{
-          model:Companies,
-          as:"company",
-          attributes:['name', "industry"]
-      }
+      include:[{
+        model:Companies,
+        as:"company",
+        attributes:['name', "industry"]
+      },
+      {
+        model:Applicants,
+        as:"applicants",
+        attributes:['id']
+      }],
     })
 
-    res.status(200).json({success: true, currentAdmin: currentAdmin, employers: employers, jobPostings:jobPostings})
+    res.status(200).json({success: true, currentAdmin: currentAdmin, employersDocuments: employersDocuments, jobPostings:jobPostings, })
   }catch(err){
     console.log(err.message)
     res.status(400).json({success: false, message: err.message})
   }
 })
+
+app.patch("/updateEmployerApproval/:id", authenticateToken, async(req, res) => {
+  const employerId = req.params.id
+  const updatedApproved = req.body.approved
+  console.log(updatedApproved, employerId)
+
+  try{
+    const employer = await Users.update({
+      approved: updatedApproved
+    },{
+      where:{
+        id: employerId
+      } 
+    })
+
+    res.status(200).json({success: true, message: "Update Successfully!"})
+  }catch(err){
+    console.log(err.message)
+     res.status(400).json({success: true, message: err.message})
+  }
+})
+
 
 app.patch("/updateJobReview/:id", authenticateToken, async(req, res) => {
   const jobPostingId = req.params.id
@@ -196,6 +226,57 @@ app.patch("/updateJobReview/:id", authenticateToken, async(req, res) => {
      res.status(400).json({success: true, message: err.message})
   }
 })
+
+//Download the resume in the applicants. This is Admin side.
+app.get("/download-document/:id", authenticateToken, async(req, res) => {
+  const applicantDocumentId = req.params.id;
+
+  try {
+    const result = await Documents.findOne({
+      where: { id: applicantDocumentId }
+    });
+    
+    if (!result || !result.fileDir) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    // Use process.cwd() instead of __dirname
+    const filePath = path.join(process.cwd(), result.fileDir);
+
+    console.log(filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found on server" });
+    }
+
+    // Get file extension and set appropriate Content-Type
+    const fileExtension = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath);
+    
+    let contentType = 'application/octet-stream'; // Default fallback
+    
+    if (fileExtension === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (fileExtension === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (fileExtension === '.doc') {
+      contentType = 'application/msword';
+    }
+
+    // Set proper headers for file download
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', contentType);
+
+    // Stream the file to the response
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+  } catch(err) {
+    console.log(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 app.listen(port, () => {
     console.log(`Server is listening at port ${port}`)

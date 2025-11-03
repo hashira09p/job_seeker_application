@@ -1,14 +1,13 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Lock, ArrowLeft } from 'lucide-react'
+import { Mail, Lock, ArrowLeft, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import Breadcrumb from '@/components/Breadcrumb'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useEffect } from 'react'
 import axios from "axios"
-
 
 function LoginPage() {
   const URL = "http://localhost:3000";
@@ -19,9 +18,9 @@ function LoginPage() {
   });
 
   const token = localStorage.getItem("token")
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [approvalStatus, setApprovalStatus] = useState(null);
 
   useEffect(() => {
     async function authenticate() {
@@ -38,38 +37,124 @@ function LoginPage() {
       ...formData,
       [e.target.name]:e.target.value
     })
+    // Clear errors when user starts typing
+    if (error) {
+      setError('');
+    }
+    if (approvalStatus) {
+      setApprovalStatus(null);
+    }
   }
+
+  // Approval Status Notification Component
+  const ApprovalNotification = ({ status }) => {
+    if (!status) return null;
+
+    const statusConfig = {
+      underReview: {
+        icon: Clock,
+        title: "Account Under Review",
+        message: "Your employer account is currently under review by our administration team. This process typically takes 1-2 business days. You will receive an email notification once your account has been approved.",
+        bgColor: "bg-blue-50",
+        borderColor: "border-blue-200",
+        textColor: "text-blue-800",
+        iconColor: "text-blue-500"
+      },
+      approved: {
+        icon: CheckCircle,
+        title: "Account Approved",
+        message: "Your employer account has been approved! You can now access all employer features.",
+        bgColor: "bg-green-50",
+        borderColor: "border-green-200",
+        textColor: "text-green-800",
+        iconColor: "text-green-500"
+      },
+      rejected: {
+        icon: AlertCircle,
+        title: "Account Not Approved",
+        message: "Your employer account application requires additional verification. Please contact our support team for more information.",
+        bgColor: "bg-red-50",
+        borderColor: "border-red-200",
+        textColor: "text-red-800",
+        iconColor: "text-red-500"
+      }
+    };
+
+    const config = statusConfig[status] || statusConfig.underReview;
+    const IconComponent = config.icon;
+
+    return (
+      <div className={`${config.bgColor} ${config.borderColor} border rounded-lg p-4 mb-6`}>
+        <div className="flex items-start gap-3">
+          <IconComponent className={`${config.iconColor} mt-0.5 flex-shrink-0`} size={20} />
+          <div className="flex-1">
+            <h3 className={`${config.textColor} font-semibold text-sm mb-1`}>
+              {config.title}
+            </h3>
+            <p className={`${config.textColor} text-sm`}>
+              {config.message}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+    setApprovalStatus(null);
 
-    try{
-      const result = await axios.post(`${URL}/submit-login`,{
+    try {
+      const result = await axios.post(`${URL}/submit-login`, {
         email: formData.email,
         password: formData.password
       });
 
-      const data = result.data
-      if(data.role == "JobSeeker"){
-        localStorage.setItem("token", data.token);
-        console.log(data)
-        alert("Login Success")
-        navigate("/");
-      }else{
-        alert("Login Success")
-        navigate("/company-dashboard");
-        localStorage.setItem("token", data.token);
+      const data = result.data;
+      
+      // Check if employer account is under review
+      if (data.role === "Employer" && data.approved === "underReview") {
+        setApprovalStatus("underReview");
+        setLoading(false);
+        return;
       }
-    }catch(err){
-      console.log(err.response.data.message);
 
-      if(err.response.data.message == "unregistered"){
-        alert("Your account is not registered yet! Please register first!")
-        navigate("/signup")
-      }else{
-        alert("Wrong Password")
-        navigate("/login")
+      // Check if employer account is rejected or not approved
+      if (data.role === "Employer" && data.approved !== "pass" && data.approved !== "approved") {
+        setApprovalStatus("rejected");
+        setLoading(false);
+        return;
       }
+
+      // Successful login for approved accounts
+      localStorage.setItem("token", data.token);
+      
+      if (data.role === "JobSeeker") {
+        console.log(data);
+        alert("Login Success");
+        navigate("/");
+      } else if (data.role === "Employer") {
+        alert("Login Success");
+        navigate("/company-dashboard");
+      } else if (data.role === "Admin") {
+        alert("Login Success");
+        navigate("/admin-dashboard");
+      }
+      
+    } catch (err) {
+      console.log(err.response?.data?.message);
+      
+      if (err.response?.data?.message === "unregistered") {
+        setError("Your account is not registered yet! Please register first!");
+      } else if (err.response?.data?.message === "wrong password") {
+        setError("Wrong password. Please try again.");
+      } else {
+        setError("Login failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,8 +184,11 @@ function LoginPage() {
               </p>
             </div>
 
+            {/* Approval Status Notification */}
+            <ApprovalNotification status={approvalStatus} />
+
             {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
                 {error}
               </div>
             )}
