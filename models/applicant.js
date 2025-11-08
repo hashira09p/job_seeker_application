@@ -29,8 +29,7 @@ Applicants.init({
 });
 
 Applicants.associate = (models) => {
-  Applicants.belongsTo(models.JobPostings,{ foreignKey: { name: 'JobPostingId', field: 'JobPostingId',  allowNull: false }, onDelete: "CASCADE",});
-
+  Applicants.belongsTo(models.JobPostings,{ foreignKey: { name: 'JobPostingId', field: 'JobPostingId', as:"jobPosting", allowNull: false }, onDelete: "CASCADE",});
   Applicants.belongsTo(models.Users,{foreignKey: "userID"})
   Applicants.belongsTo(models.Documents, {
   foreignKey: "documentID",

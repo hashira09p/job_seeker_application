@@ -15,15 +15,27 @@ import { FileEdit, Trophy } from 'lucide-react';
 import multer from "multer"
 import fs from "fs"
 import path from 'path';
+import {Server} from "socket.io"
+import http from "http";
 
 dotenv.config()
 
 const {Users, Companies, JobPostings, Documents, Applicants} = db
 const port = 3000;
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server,{
+  cors: {
+    origin: "http://localhost:5173"
+  }
+})
 const saltRounds = 15;
 const JWT_SECRET = "just_a_secret"
 const uploadDir = "uploads/resumes"
+
+io.on("connection", (socket) => {
+  console.log("User connected", socket.id);
+});
 
 if(!fs.existsSync(uploadDir)){
   fs.mkdirSync(uploadDir, {recursive: true})
@@ -312,21 +324,50 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
 
 //Update the status of applicants from Employer Side
 app.patch("/applicants/:id", authenticateToken, async(req,res) => {
-  const applicantId = req.params.id
-  const status = req.body.status
-  try{
-    const result = Applicants.update({
-      status: status
-    },{
-      where:{
-        id: applicantId
-      }
-    })
+    const applicantId = req.params.id
+    const status = req.body.status
+    try{
+        const result = await Applicants.update({
+          status: status
+        }, {
+          where: {
+            id: applicantId
+          }
+        })
 
-    res.status(200).json({message: "Ok"})
-  }catch(err){
-    res.status(400).json({message: err.message})
-  }
+        const applicant = await Applicants.findOne({
+          where: {
+            id: applicantId
+          },
+          include: {
+            model: JobPostings,
+            attributes: ["companyID","title"]
+          }
+        })
+
+        const company = await Companies.findOne({
+          where: {
+            id: applicant.JobPosting.companyID
+          }
+        })
+
+        const companyName = company.name
+        const applicationStatus = applicant.status
+
+        console.log(companyName)
+        
+        io.emit("applicationStatusUpdated", {
+          applicationId: applicantId,
+          jobTitle: applicant.JobPosting.title,
+          company: companyName, 
+          status: applicationStatus,
+          userId: applicant.userId 
+        })
+
+        res.status(200).json({message: "Ok"})
+    } catch(err) {
+        res.status(400).json({message: err.message})
+    }
 })
 
 // Creating jobposting employer side
@@ -691,6 +732,6 @@ passport.deserializeUser(async(id, done) => {
   }
 })
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running in port ${port}`)
 })
