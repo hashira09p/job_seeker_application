@@ -11,15 +11,15 @@ import {
     XCircle,
     Clock4,
     Eye,
-    ArrowRight,
     Download,
     Mail,
-    Phone,
     User,
+    RefreshCw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { io } from "socket.io-client";
 
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -52,156 +52,111 @@ function AppliedJobsPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [selectedApplication, setSelectedApplication] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [socket, setSocket] = useState(null);
+    const [lastUpdate, setLastUpdate] = useState(null);
+    const [debugInfo, setDebugInfo] = useState("");
     const URL = "http://localhost:3000";
-
-    // Sample data for demonstration
-    const sampleAppliedJobs = [
-        {
-            id: 1,
-            applicationId: "APP-001",
-            job: {
-                id: 101,
-                title: "Senior Frontend Developer",
-                company: {
-                    name: "TechCorp Philippines",
-                    industry: "Technology"
-                },
-                location: "Manila",
-                type: "Full-time",
-                salaryMin: 60000,
-                salaryMax: 90000,
-                description: "We are looking for an experienced Frontend Developer to join our growing team...",
-                status: "active",
-                createdAt: "2024-01-15T00:00:00.000Z"
-            },
-            applicationDate: "2024-01-20T10:30:00.000Z",
-            status: "submitted",
-            coverLetter: "I am very interested in this position and believe my skills align perfectly with your requirements...",
-            resume: {
-                fileName: "john_doe_resume.pdf",
-                docType: "Resume"
-            }
-        },
-        {
-            id: 2,
-            applicationId: "APP-002",
-            job: {
-                id: 102,
-                title: "Product Manager",
-                company: {
-                    name: "Innovate Solutions Inc",
-                    industry: "Software"
-                },
-                location: "Cebu",
-                type: "Full-time",
-                salaryMin: 70000,
-                salaryMax: 100000,
-                description: "Join our product team to drive innovation and deliver exceptional user experiences...",
-                status: "active",
-                createdAt: "2024-01-10T00:00:00.000Z"
-            },
-            applicationDate: "2024-01-18T14:20:00.000Z",
-            status: "under_review",
-            coverLetter: "With 5 years of product management experience, I am excited about the opportunity to contribute to your team...",
-            resume: {
-                fileName: "john_doe_updated_resume.pdf",
-                docType: "Resume"
-            }
-        },
-        {
-            id: 3,
-            applicationId: "APP-003",
-            job: {
-                id: 103,
-                title: "UX/UI Designer",
-                company: {
-                    name: "Creative Studio Co",
-                    industry: "Design"
-                },
-                location: "Remote",
-                type: "Contract",
-                salaryMin: 45000,
-                salaryMax: 65000,
-                description: "We need a creative UX/UI Designer to help us build beautiful and functional interfaces...",
-                status: "active",
-                createdAt: "2024-01-05T00:00:00.000Z"
-            },
-            applicationDate: "2024-01-12T09:15:00.000Z",
-            status: "accepted",
-            coverLetter: "As a passionate designer with a strong portfolio, I would love to bring my skills to your creative team...",
-            resume: {
-                fileName: "john_doe_design_portfolio.pdf",
-                docType: "Portfolio"
-            }
-        },
-        {
-            id: 4,
-            applicationId: "APP-004",
-            job: {
-                id: 104,
-                title: "Backend Engineer",
-                company: {
-                    name: "DataSystems Ltd",
-                    industry: "Technology"
-                },
-                location: "Taguig",
-                type: "Full-time",
-                salaryMin: 65000,
-                salaryMax: 95000,
-                description: "Looking for a skilled Backend Engineer to work on our scalable systems...",
-                status: "active",
-                createdAt: "2024-01-08T00:00:00.000Z"
-            },
-            applicationDate: "2024-01-25T16:45:00.000Z",
-            status: "rejected",
-            coverLetter: "I have extensive experience in backend development and am excited about this opportunity...",
-            resume: {
-                fileName: "john_doe_technical_resume.pdf",
-                docType: "Resume"
-            }
-        },
-        {
-            id: 5,
-            applicationId: "APP-005",
-            job: {
-                id: 105,
-                title: "Marketing Specialist",
-                company: {
-                    name: "Growth Marketing Agency",
-                    industry: "Marketing"
-                },
-                location: "Quezon City",
-                type: "Part-time",
-                salaryMin: 30000,
-                salaryMax: 40000,
-                description: "Join our dynamic marketing team to drive brand awareness and customer engagement...",
-                status: "active",
-                createdAt: "2024-01-20T00:00:00.000Z"
-            },
-            applicationDate: "2024-01-28T11:20:00.000Z",
-            status: "submitted",
-            coverLetter: "With my background in digital marketing, I believe I can help your team achieve its goals...",
-            resume: {
-                fileName: "john_doe_marketing_cv.pdf",
-                docType: "CV"
-            }
-        }
-    ];
 
     const statusOptions = [
         { value: "all", label: "All Applications" },
         { value: "submitted", label: "Submitted" },
         { value: "under_review", label: "Under Review" },
+        { value: "shortlisted", label: "Shortlisted" },
         { value: "accepted", label: "Accepted" },
         { value: "rejected", label: "Rejected" },
+        { value: "hired", label: "Hired" },
     ];
 
-    const sortOptions = [
-        { value: "latest", label: "Latest First" },
-        { value: "oldest", label: "Oldest First" },
-        { value: "company", label: "Company Name" },
-        { value: "job_title", label: "Job Title" },
-    ];
+    // Initialize socket connection for real-time updates
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            console.log("No token found, skipping socket connection");
+            return;
+        }
+
+        console.log("🔄 Initializing socket connection for Applied Jobs...");
+        const newSocket = io(URL, {
+            transports: ['websocket', 'polling'],
+            auth: {
+                token: token
+            }
+        });
+
+        newSocket.on("connect", () => {
+            console.log("✅ Connected to server from Applied Jobs");
+            setDebugInfo(prev => prev + " • Socket connected");
+        });
+
+        newSocket.on("disconnect", () => {
+            console.log("❌ Disconnected from server");
+            setDebugInfo(prev => prev + " • Socket disconnected");
+        });
+
+        // Listen for application status updates
+        newSocket.on("applicationStatusUpdated", (data) => {
+            console.log("📨 Real-time status update received:", data);
+            handleRealTimeStatusUpdate(data);
+        });
+
+        setSocket(newSocket);
+
+        return () => {
+            if (newSocket) {
+                console.log("🧹 Cleaning up socket connection");
+                newSocket.disconnect();
+            }
+        };
+    }, []);
+
+    // Handle real-time status updates
+    const handleRealTimeStatusUpdate = (updateData) => {
+        setAppliedJobs(prevApplications => {
+            const updatedApplications = prevApplications.map(app => {
+                if (app.id === updateData.applicationId || 
+                    app.applicationId === updateData.applicationId ||
+                    app.job?.id === updateData.jobId) {
+                    
+                    console.log(`🔄 Updating application ${app.id} status from ${app.status} to ${updateData.status}`);
+                    
+                    return {
+                        ...app,
+                        status: updateData.status,
+                        updatedAt: updateData.updatedAt || new Date().toISOString()
+                    };
+                }
+                return app;
+            });
+
+            setFilteredJobs(prevFiltered => 
+                prevFiltered.map(app => {
+                    if (app.id === updateData.applicationId || 
+                        app.applicationId === updateData.applicationId ||
+                        app.job?.id === updateData.jobId) {
+                        return {
+                            ...app,
+                            status: updateData.status
+                        };
+                    }
+                    return app;
+                })
+            );
+
+            if (selectedApplication && 
+                (selectedApplication.id === updateData.applicationId || 
+                 selectedApplication.applicationId === updateData.applicationId ||
+                 selectedApplication.job?.id === updateData.jobId)) {
+                setSelectedApplication(prev => ({
+                    ...prev,
+                    status: updateData.status
+                }));
+            }
+
+            setLastUpdate(new Date());
+            setDebugInfo(prev => prev + ` • Status updated: ${updateData.status}`);
+            return updatedApplications;
+        });
+    };
 
     useEffect(() => {
         loadAppliedJobs();
@@ -214,16 +169,102 @@ function AppliedJobsPage() {
     const loadAppliedJobs = async () => {
         try {
             setLoading(true);
-            // For now, using sample data. Replace with actual API call later:
-            // const response = await axios.get(`${URL}/user/applications`, {
-            //     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-            // });
-            // setAppliedJobs(response.data.applications || []);
+            const token = localStorage.getItem("token");
             
-            setAppliedJobs(sampleAppliedJobs);
-            setFilteredJobs(sampleAppliedJobs);
+            if (!token) {
+                const debugMsg = "❌ No authentication token found in localStorage";
+                console.error(debugMsg);
+                setDebugInfo(debugMsg);
+                setLoading(false);
+                return;
+            }
+
+            console.log("📡 Fetching applied jobs from API...");
+            
+            // Decode token to check user info
+            try {
+                const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+                console.log("👤 User from token:", tokenPayload);
+                setDebugInfo(`User ID: ${tokenPayload.id}`);
+            } catch (e) {
+                console.log("Could not decode token:", e);
+                setDebugInfo("Token format error");
+            }
+
+            const response = await axios.get(`${URL}/applied-jobs`, {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000
+            });
+
+            console.log("✅ API Response status:", response.status);
+            console.log("✅ API Response data:", response.data);
+            
+            if (response.data.userApplications && response.data.userApplications.length > 0) {
+                console.log(`🎉 Found ${response.data.userApplications.length} applications from backend`);
+                
+                // Transform the data based on your actual backend structure
+                // In your loadAppliedJobs function, update the transformation:
+                const transformedApplications = response.data.userApplications.map((app) => {
+                    console.log("Raw application data:", app);
+                    
+                    return {
+                        id: app.id,
+                        applicationId: app.applicationId,
+                        job: {
+                            id: app.JobPosting?.id || app.jobId,
+                            title: app.JobPosting?.title || "Job Title",
+                            company: {
+                                name: app.JobPosting?.company?.name || "Company Name",
+                                industry: app.JobPosting?.company?.industry || "Industry"
+                            },
+                            location: app.JobPosting?.location || "Location",
+                            type: app.JobPosting?.type || "Full-time",
+                            salaryMin: app.JobPosting?.salaryMin || 0,
+                            salaryMax: app.JobPosting?.salaryMax || 0,
+                            description: app.JobPosting?.description || "Job description",
+                            status: app.JobPosting?.status || "active",
+                            createdAt: app.JobPosting?.createdAt || new Date().toISOString()
+                        },
+                        applicationDate: app.applicationDate || app.createdAt || new Date().toISOString(),
+                        status: app.status || "submitted",
+                        coverLetter: app.coverLetter || "",
+                        resume: {
+                            fileName: app.resumeFileName || "resume.pdf",
+                            docType: app.docType || "Resume"
+                        }
+                    };
+                });
+                
+                console.log("📦 Transformed applications:", transformedApplications);
+                setAppliedJobs(transformedApplications);
+                setFilteredJobs(transformedApplications);
+                setDebugInfo(`✅ Loaded ${transformedApplications.length} applications from backend`);
+            } else {
+                console.log("ℹ️ No applications found in backend response");
+                setAppliedJobs([]);
+                setFilteredJobs([]);
+                setDebugInfo("ℹ️ No applications found for this user in database");
+            }
         } catch (error) {
-            console.error("Error loading applied jobs:", error);
+            console.error("❌ Error loading applied jobs:", error);
+            
+            let errorMessage = "Unknown error occurred";
+            if (error.response) {
+                console.error("Response status:", error.response.status);
+                console.error("Response data:", error.response.data);
+                errorMessage = `API Error: ${error.response.status} - ${error.response.data?.message || 'No message'}`;
+            } else if (error.request) {
+                console.error("No response received:", error.request);
+                errorMessage = "No response from server - check if backend is running";
+            } else {
+                console.error("Request setup error:", error.message);
+                errorMessage = `Request error: ${error.message}`;
+            }
+            
+            setDebugInfo(`❌ ${errorMessage}`);
             setAppliedJobs([]);
             setFilteredJobs([]);
         } finally {
@@ -266,8 +307,10 @@ function AppliedJobsPage() {
         const statusConfig = {
             submitted: { label: "Submitted", color: "bg-blue-100 text-blue-800 border-blue-200" },
             under_review: { label: "Under Review", color: "bg-amber-100 text-amber-800 border-amber-200" },
+            shortlisted: { label: "Shortlisted", color: "bg-purple-100 text-purple-800 border-purple-200" },
             accepted: { label: "Accepted", color: "bg-green-100 text-green-800 border-green-200" },
             rejected: { label: "Rejected", color: "bg-red-100 text-red-800 border-red-200" },
+            hired: { label: "Hired", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
         };
 
         const config = statusConfig[status] || statusConfig.submitted;
@@ -285,10 +328,14 @@ function AppliedJobsPage() {
                 return <FileText className="h-4 w-4" />;
             case "under_review":
                 return <Clock4 className="h-4 w-4" />;
+            case "shortlisted":
+                return <CheckCircle className="h-4 w-4 text-purple-600" />;
             case "accepted":
-                return <CheckCircle className="h-4 w-4" />;
+                return <CheckCircle className="h-4 w-4 text-green-600" />;
             case "rejected":
-                return <XCircle className="h-4 w-4" />;
+                return <XCircle className="h-4 w-4 text-red-600" />;
+            case "hired":
+                return <CheckCircle className="h-4 w-4 text-emerald-600" />;
             default:
                 return <FileText className="h-4 w-4" />;
         }
@@ -323,12 +370,48 @@ function AppliedJobsPage() {
         });
     };
 
+    const formatTimeAgo = (date) => {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return 'Just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             <Navigation />
             <Breadcrumb />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Debug Information */}
+                <Card className="mb-4 border-blue-200 bg-blue-50">
+                    <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="font-semibold text-blue-800">Application Status</h3>
+                                <p className="text-sm text-blue-700">{debugInfo}</p>
+                                {lastUpdate && (
+                                    <p className="text-xs text-blue-600 mt-1">
+                                        Last update: {formatTimeAgo(lastUpdate)}
+                                    </p>
+                                )}
+                            </div>
+                            <Button 
+                                onClick={loadAppliedJobs} 
+                                variant="outline" 
+                                size="sm"
+                                className="border-blue-300 text-blue-700"
+                            >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Refresh
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* Hero Section */}
                 <div className="text-center mb-12">
                     <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -376,13 +459,13 @@ function AppliedJobsPage() {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Accepted</p>
+                                    <p className="text-sm font-medium text-gray-600">Shortlisted</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {appliedJobs.filter(app => app.status === 'accepted').length}
+                                        {appliedJobs.filter(app => app.status === 'shortlisted').length}
                                     </p>
                                 </div>
-                                <div className="bg-green-100 p-3 rounded-full">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                                <div className="bg-purple-100 p-3 rounded-full">
+                                    <CheckCircle className="h-6 w-6 text-purple-600" />
                                 </div>
                             </div>
                         </CardContent>
@@ -399,8 +482,8 @@ function AppliedJobsPage() {
                                         ).length}
                                     </p>
                                 </div>
-                                <div className="bg-purple-100 p-3 rounded-full">
-                                    <Calendar className="h-6 w-6 text-purple-600" />
+                                <div className="bg-green-100 p-3 rounded-full">
+                                    <Calendar className="h-6 w-6 text-green-600" />
                                 </div>
                             </div>
                         </CardContent>
@@ -410,10 +493,15 @@ function AppliedJobsPage() {
                 {/* Search and Filters */}
                 <Card className="shadow-lg border-0 mb-8 bg-white">
                     <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
-                        <CardTitle className="flex items-center gap-2 text-xl text-gray-800">
-                            <Search className="h-5 w-5 text-green-600" />
-                            Filter Applications
+                        <CardTitle className="flex items-center justify-between text-xl text-gray-800">
+                            <div className="flex items-center gap-2">
+                                <Search className="h-5 w-5 text-green-600" />
+                                Filter Applications
+                            </div>
                         </CardTitle>
+                        <CardDescription>
+                            {appliedJobs.length} total applications • Real-time updates enabled
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
                         <div className="flex flex-col lg:flex-row gap-4">
@@ -423,6 +511,7 @@ function AppliedJobsPage() {
                                     type="text"
                                     placeholder="Search by job title, company, or location"
                                     className="pl-10 h-12 border-2 border-gray-200 focus:border-green-500"
+                                    value={searchQuery}
                                     onChange={(e) => handleSearchChange(e.target.value)}
                                 />
                             </div>
@@ -516,12 +605,6 @@ function AppliedJobsPage() {
                                                         <span>{application.job.type}</span>
                                                     </div>
                                                 </div>
-
-                                                {application.job.company?.industry && (
-                                                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                                                        <span>Industry: {application.job.company.industry}</span>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 

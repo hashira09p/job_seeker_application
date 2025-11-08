@@ -370,6 +370,38 @@ app.patch("/applicants/:id", authenticateToken, async(req,res) => {
     }
 })
 
+// Corrected backend route - /app/applied-jobs
+app.get("/applied-jobs", authenticateToken, async (req, res) => { 
+    try { 
+        const currentUser = req.user.id; 
+        console.log("🔄 Fetching applications for user:", currentUser); 
+        
+        const applications = await Applicants.findAll({ 
+            where: { userID: currentUser }, 
+            include: [ 
+                { 
+                    model: JobPostings, 
+                    include: [ 
+                        { model: Companies, as: "company" } 
+                    ] 
+                } 
+            ],
+            order: [['createdAt', 'DESC']]
+        }); 
+        
+        console.log("✅ Found applications:", applications.length); 
+        console.log("📦 Applications data:", JSON.stringify(applications, null, 2)); 
+        
+        res.status(200).json({ 
+            message: "success", 
+            userApplications: applications 
+        }); 
+    } catch (err) { 
+        console.log("❌ Error fetching applications:", err.message); 
+        res.status(400).json({ message: err.message });
+    }
+});
+
 // Creating jobposting employer side
 app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
   const {title, description, location, type, salaryMin, salaryMax} = req.body
