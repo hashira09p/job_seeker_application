@@ -15,12 +15,10 @@ import { FileEdit, Trophy } from 'lucide-react';
 import multer from "multer"
 import fs from "fs"
 import path from 'path';
-<<<<<<< Updated upstream
+import affindaService from './services/affindaService.js';
 import {Server} from "socket.io"
 import http from "http";
-=======
-import affindaService from './services/affindaService.js';
->>>>>>> Stashed changes
+
 
 dotenv.config()
 
@@ -621,15 +619,73 @@ app.get("/getResume", authenticateToken, async(req, res) => {
   }
 })
 
-// New endpoint to get parsed resume data
+// Trigger parsing for an existing document (Employer side - parse applicant's resume)
+app.post("/parseResume/:documentId", authenticateToken, async(req, res) => {
+  const documentId = req.params.documentId;
+  
+  try {
+    // Find the document (no userID check since employer is parsing applicant's resume)
+    const document = await Documents.findOne({
+      where: {
+        id: documentId
+      }
+    });
+    
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Check if already parsed
+    if (document.isParsed) {
+      const parsedData = document.parsedData ? JSON.parse(document.parsedData) : null;
+      return res.status(200).json({
+        message: "Already parsed",
+        document: {
+          id: document.id,
+          fileName: document.fileName,
+          isParsed: true,
+          parseFailed: false
+        },
+        parsedData: parsedData
+      });
+    }
+
+    // Check if file exists
+    const filePath = path.join(process.cwd(), document.fileDir);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Resume file not found on server" });
+    }
+
+    // Trigger background parsing
+    console.log(`🤖 Employer triggered parsing for document ${documentId}`);
+    parseResumeAsync(documentId, filePath, document.userID);
+
+    res.status(200).json({
+      message: "Parsing started",
+      document: {
+        id: document.id,
+        fileName: document.fileName,
+        isParsed: false,
+        parseFailed: false
+      },
+      parsing: true
+    });
+
+  } catch(err) {
+    console.log(err.message);
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// New endpoint to get parsed resume data (Updated to allow employers to view applicant resumes)
 app.get("/getResumeData/:documentId", authenticateToken, async(req, res) => {
   const documentId = req.params.documentId;
   
   try {
+    // Find document without userID restriction (allow employers to view applicant resumes)
     const document = await Documents.findOne({
       where: {
-        id: documentId,
-        userID: req.user.id
+        id: documentId
       }
     });
     

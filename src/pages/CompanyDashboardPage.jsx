@@ -57,6 +57,10 @@ function CompanyDashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [parsedData, setParsedData] = useState(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isParsingComplete, setIsParsingComplete] = useState(false);
+  const [uploadedDocumentId, setUploadedDocumentId] = useState(null);
+  const [parseError, setParseError] = useState("");
   const [user, setUser] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   
@@ -455,11 +459,6 @@ function CompanyDashboardPage() {
       view: "jobs"
     },
     {
-      title: "Resume Parser",
-      icon: Target,
-      view: "resume-parser"
-    },
-    {
       title: "Create Job Posting",
       icon: Plus,
       view: "create-job-posting"
@@ -699,9 +698,11 @@ function CompanyDashboardPage() {
   };
 
   const handleApplicantClick = (applicant) => {
-    setSelectedApplicant(applicant)
-    setIsDrawerOpen(true)
-  }
+    setSelectedApplicant(applicant);
+    setIsDrawerOpen(true);
+    // Clear previous parsed data when opening a new applicant
+    clearParsedData();
+  };
 
   const handleBackToJobs = () => {
     setSelectedJob(null);
@@ -709,70 +710,139 @@ function CompanyDashboardPage() {
     setActiveView('jobs');
   };
 
-  // Resume Parser functions
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-      setUploadedFile(file)
-      setIsUploading(true)
-      setUploadProgress(0)
-      
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            setIsUploading(false)
-            analyzeResume(file)
-            return 100
-          }
-          return prev + 10
-        })
-      }, 200)
+  // Resume Parser functions - Parse applicant's existing resume
+  const handleParseApplicantResume = async (documentId) => {
+    if (!documentId) {
+      alert('No resume found for this applicant');
+      return;
     }
-  }
 
-  const analyzeResume = async (file) => {
-    setIsAnalyzing(true)
-    
-    setTimeout(() => {
-      const mockSkills = [
-        "React", "JavaScript", "Node.js", "Python", "TypeScript", 
-        "AWS", "Docker", "Git", "MongoDB", "PostgreSQL", "CSS", "HTML",
-        "Project Management", "Team Leadership", "Agile", "Scrum"
-      ]
+    setIsParsing(true);
+    setParseError("");
+    setParsedData(null);
+    setExtractedSkills([]);
+    setAnalysisComplete(false);
+
+    try {
+      const token = localStorage.getItem("token");
       
-      const mockParsedData = {
-        name: "Joshua Dee Tulali",
-        email: "joshua.tulali@email.com",
-        phone: "+63 9151 68 0095",
-        experience: "5 years",
-        education: "BS Computer Science",
-        skills: mockSkills,
-        summary: "Experienced software engineer with 5 years of experience in full-stack development.",
-        workExperience: [
-          {
-            company: "TechCorp Philippines",
-            position: "Senior Software Engineer",
-            duration: "2022 - Present",
-            description: "Led development of web applications using React and Node.js"
-          }
-        ]
+      console.log(`📄 Attempting to parse document ID: ${documentId}`);
+      
+      // Check if already parsed
+      const checkResponse = await axios.get(`${URL}/getResumeData/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log("Document status:", checkResponse.data);
+
+      if (checkResponse.data.document.isParsed) {
+        // Already parsed, display data immediately
+        const parsedResumeData = checkResponse.data.parsedData;
+        setParsedData(parsedResumeData);
+        
+        if (parsedResumeData.skills && parsedResumeData.skills.length > 0) {
+          const skillNames = parsedResumeData.skills.map(s => s.name);
+          setExtractedSkills(skillNames);
+        }
+        
+        setIsParsing(false);
+        setAnalysisComplete(true);
+        console.log("✅ Using existing parsed data");
+      } else if (checkResponse.data.document.parseFailed) {
+        // Previous parsing failed, retry
+        console.log("⚠️ Previous parsing failed, retrying...");
+        await axios.post(`${URL}/parseResume/${documentId}`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Start polling for parsed data
+        pollForParsedData(documentId);
+      } else {
+        // Not parsed yet, trigger parsing
+        console.log("🚀 Triggering new parse...");
+        const parseResponse = await axios.post(`${URL}/parseResume/${documentId}`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log("Parse triggered:", parseResponse.data);
+        
+        // Start polling for parsed data
+        pollForParsedData(documentId);
       }
-      
-      setExtractedSkills(mockSkills)
-      setParsedData(mockParsedData)
-      setAnalysisComplete(true)
-      setIsAnalyzing(false)
-    }, 3000)
-  }
 
-  const removeFile = () => {
-    setUploadedFile(null)
-    setUploadProgress(0)
-    setExtractedSkills([])
-    setParsedData(null)
-    setAnalysisComplete(false)
-  }
+    } catch (error) {
+      console.error('❌ Error parsing resume:', error);
+      console.error('Error details:', error.response?.data);
+      setIsParsing(false);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Error parsing resume';
+      setParseError(errorMessage);
+      
+      alert(`Failed to parse resume: ${errorMessage}`);
+    }
+  };
+
+  // Add this function to poll for parsed data
+  const pollForParsedData = async (documentId) => {
+    const maxAttempts = 20; // 20 attempts × 3 seconds = 60 seconds max
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${URL}/getResumeData/${documentId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.document.isParsed) {
+          // Parsing complete!
+          const parsedResumeData = response.data.parsedData;
+          setParsedData(parsedResumeData);
+          
+          // Extract skills
+          if (parsedResumeData.skills && parsedResumeData.skills.length > 0) {
+            const skillNames = parsedResumeData.skills.map(s => s.name);
+            setExtractedSkills(skillNames);
+          }
+          
+          setIsParsing(false);
+          setIsParsingComplete(true);
+          setAnalysisComplete(true);
+          
+        } else if (response.data.document.parseFailed) {
+          // Parsing failed
+          setIsParsing(false);
+          setParseError(response.data.document.parseError || 'Parsing failed');
+          alert('AI parsing failed. Please try another resume.');
+          
+        } else {
+          // Still parsing, continue polling
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 3000); // Poll every 3 seconds
+          } else {
+            setIsParsing(false);
+            setParseError('Parsing timeout. Please try again.');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching parsed data:', error);
+        setIsParsing(false);
+        setParseError('Error fetching parsed data');
+      }
+    };
+
+    poll();
+  };
+
+  const clearParsedData = () => {
+    setExtractedSkills([]);
+    setParsedData(null);
+    setAnalysisComplete(false);
+    setIsParsing(false);
+    setIsParsingComplete(false);
+    setParseError("");
+  };
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -816,8 +886,6 @@ function CompanyDashboardPage() {
         return renderJobsTable()
       case 'job-applicants':
         return renderJobApplicantsTable()
-      case 'resume-parser':
-        return renderResumeParser()
       case 'create-job-posting':
         return renderCreateJobPosting()
       default:
@@ -1211,239 +1279,8 @@ function CompanyDashboardPage() {
     );
   }
 
-  const renderResumeParser = () => (
-    <div className="space-y-6">
-      {/* Upload Section */}
-      <Card className="shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-primary" />
-            Resume Parser
-          </CardTitle>
-          <CardDescription>
-            Upload a resume to extract skills, experience, and qualifications automatically
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!uploadedFile ? (
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 text-center hover:border-primary/50 transition-colors cursor-pointer">
-              <Input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="resume-parser-upload"
-              />
-              <label htmlFor="resume-parser-upload" className="cursor-pointer">
-                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Choose a resume file to parse
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  Drag and drop your resume here, or click to browse files
-                </p>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Choose File
-                </Button>
-                <p className="text-sm text-muted-foreground mt-4">
-                  Supported formats: PDF, DOC, DOCX (Max 10MB)
-                </p>
-              </label>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">Uploading...</span>
-                    <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* File Info */}
-              {uploadedFile && !isUploading && (
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{uploadedFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={removeFile} className="hover:bg-red-50 border-red-200">
-                      <Trash2 className="h-4 w-4 mr-2 text-red-600" />
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Analysis Status */}
-              {isAnalyzing && (
-                <div className="text-center py-8">
-                  <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Analyzing Resume
-                  </h3>
-                  <p className="text-muted-foreground">
-                   Extracting skills and experience from the resume...
-                  </p>
-                </div>
-              )}
-
-              {/* Analysis Complete */}
-              {analysisComplete && (
-                <div className="text-center py-8">
-                  <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Analysis Complete!
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Successfully extracted {extractedSkills.length} skills and parsed resume data.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Extracted Skills */}
-      {extractedSkills.length > 0 && (
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Extracted Skills
-            </CardTitle>
-            <CardDescription>
-              Skills and technologies identified from the resume
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {extractedSkills.map((skill, index) => (
-                <Badge key={index} variant="secondary" className="text-sm bg-blue-50 text-blue-700 border-blue-200">
-                  {skill}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Parsed Data */}
-      {parsedData && (
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5 text-primary" />
-              Parsed Resume Data
-            </CardTitle>
-            <CardDescription>
-              Complete information extracted from the resume
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Name:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.name}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Email:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.email}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Phone:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.phone}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Experience:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.experience}</p>
-                </div>
-              </div>
-
-              {/* Education */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Education:</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{parsedData.education}</p>
-              </div>
-
-              {/* Summary */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Professional Summary:</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{parsedData.summary}</p>
-              </div>
-
-              {/* Work Experience */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Work Experience:</span>
-                </div>
-                <div className="space-y-3">
-                  {parsedData.workExperience.map((job, index) => (
-                    <div key={index} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{job.position}</h4>
-                        <span className="text-xs text-muted-foreground">{job.duration}</span>
-                      </div>
-                      <p className="text-sm font-medium text-primary mb-1">{job.company}</p>
-                      <p className="text-sm text-muted-foreground">{job.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
+  // Resume parsing is now integrated into the applicant drawer
+  // Employers can parse applicants' resumes directly from the applicant details view
 
   const renderCreateJobPosting = () => {
     return (
@@ -1975,6 +1812,124 @@ function CompanyDashboardPage() {
                       </div>
                     )}
 
+                    {/* AI Parsed Skills - Show if parsed */}
+                    {extractedSkills.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-blue-600" />
+                          AI Extracted Skills ({extractedSkills.length})
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {extractedSkills.map((skill, index) => (
+                            <Badge key={index} variant="secondary" className="text-sm bg-purple-50 text-purple-700 border-purple-200">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Error Display */}
+                    {parseError && (
+                      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-red-900 mb-1">Parsing Failed</h4>
+                            <p className="text-sm text-red-700">{parseError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI Parsing Status */}
+                    {isParsing && !parseError && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-blue-900">AI is Analyzing Resume</h4>
+                            <p className="text-sm text-blue-700">
+                              Extracting skills, experience, and qualifications... (10-30 seconds)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI Parsed Data */}
+                    {parsedData && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="font-semibold flex items-center gap-2 text-lg">
+                          <Sparkles className="h-5 w-5 text-blue-600" />
+                          AI Parsed Resume Data
+                        </h4>
+
+                        {/* Parsed Basic Info */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {parsedData.totalYearsExperience > 0 && (
+                            <div className="p-2 bg-gray-50 rounded">
+                              <p className="text-xs text-muted-foreground">Experience</p>
+                              <p className="font-medium">{parsedData.totalYearsExperience} years</p>
+                            </div>
+                          )}
+                          {parsedData.location && (
+                            <div className="p-2 bg-gray-50 rounded">
+                              <p className="text-xs text-muted-foreground">Location</p>
+                              <p className="font-medium text-sm">{parsedData.location}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Summary */}
+                        {parsedData.summary && (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Professional Summary:</p>
+                            <p className="text-sm text-muted-foreground">{parsedData.summary}</p>
+                          </div>
+                        )}
+
+                        {/* Work Experience */}
+                        {parsedData.workExperience && parsedData.workExperience.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Work Experience:</p>
+                            {parsedData.workExperience.slice(0, 2).map((job, index) => (
+                              <div key={index} className="p-2 bg-gray-50 rounded text-sm">
+                                <p className="font-medium">{job.jobTitle}</p>
+                                <p className="text-xs text-muted-foreground">{job.organization}</p>
+                              </div>
+                            ))}
+                            {parsedData.workExperience.length > 2 && (
+                              <p className="text-xs text-muted-foreground">
+                                +{parsedData.workExperience.length - 2} more positions
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Education */}
+                        {parsedData.education && parsedData.education.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Education:</p>
+                            <p className="text-sm text-muted-foreground">{parsedData.education[0].degree}</p>
+                            {parsedData.education[0].institution && (
+                              <p className="text-xs text-muted-foreground">{parsedData.education[0].institution}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Parse Error */}
+                    {parseError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {parseError}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Education */}
                     {selectedApplicant.education && (
                       <div className="space-y-2">
@@ -2000,6 +1955,18 @@ function CompanyDashboardPage() {
                 )}
               </div>
               <DrawerFooter>
+                <div className="flex gap-2">
+                  {/* Parse Resume Button */}
+                  <Button 
+                    variant="outline"
+                    className="flex-1 border-purple-200 hover:bg-purple-50 text-purple-700"
+                    onClick={() => selectedApplicant?.Document?.id && handleParseApplicantResume(selectedApplicant.Document.id)}
+                    disabled={!selectedApplicant?.Document?.id || isParsing}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {isParsing ? 'Parsing...' : parsedData ? 'Re-parse Resume' : 'Parse Resume with AI'}
+                  </Button>
+                </div>
                 <div className="flex gap-2">
                   <Button 
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
