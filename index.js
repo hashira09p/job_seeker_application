@@ -15,8 +15,12 @@ import { FileEdit, Trophy } from 'lucide-react';
 import multer from "multer"
 import fs from "fs"
 import path from 'path';
+<<<<<<< Updated upstream
 import {Server} from "socket.io"
 import http from "http";
+=======
+import affindaService from './services/affindaService.js';
+>>>>>>> Stashed changes
 
 dotenv.config()
 
@@ -522,13 +526,84 @@ app.post("/uploadResume", authenticateToken, upload.single("document"), async(re
       fileDir: req.file.path
     })
     
-    res.status(200).json({message: "Saved Success", document: result})
+    console.log('📄 Document saved to database:', result.id);
+    
+    // Parse resume with Affinda API in the background (non-blocking)
+    // This allows the response to be sent immediately while parsing happens asynchronously
+    parseResumeAsync(result.id, req.file.path, req.user.id);
+    
+    res.status(200).json({
+      message: "Document uploaded successfully. AI parsing in progress...",
+      document: result,
+      parsing: true
+    })
   }catch(err){
     console.log(err.message)
     res.status(400).json({message: "Delete first your existing file"})
     return
   }
 })
+
+/**
+ * Async function to parse resume without blocking response
+ * This runs in the background after the upload completes
+ * @param {number} documentId - The document ID in database
+ * @param {string} filePath - Path to the uploaded file
+ * @param {number} userId - User ID who uploaded the document
+ */
+async function parseResumeAsync(documentId, filePath, userId) {
+  try {
+    console.log(`🤖 Starting AI parsing for document ${documentId}`);
+    
+    // Parse resume with Affinda
+    const parsedData = await affindaService.parseResume(filePath);
+    
+    console.log('✅ Resume parsed successfully:', parsedData.name);
+    
+    // Store parsed data in database
+    await Documents.update({
+      parsedData: JSON.stringify(parsedData),
+      isParsed: true,
+      parseFailed: false,
+      parseError: null
+    }, {
+      where: { id: documentId }
+    });
+    
+    // Optionally update user profile with extracted information
+    // Only update if fields are empty in user profile
+    const user = await Users.findByPk(userId);
+    const updates = {};
+    
+    if (!user.fullName && parsedData.name) {
+      updates.fullName = parsedData.name;
+    }
+    if (!user.email && parsedData.email) {
+      updates.email = parsedData.email;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await Users.update(updates, {
+        where: { id: userId }
+      });
+      console.log(`👤 Updated user profile with parsed data`);
+    }
+    
+    console.log(`✅ AI parsing completed for document ${documentId}`);
+    
+  } catch (error) {
+    console.error(`❌ Error parsing resume ${documentId}:`, error.message);
+    
+    // Mark parsing as failed
+    await Documents.update({
+      parseFailed: true,
+      parseError: error.message,
+      isParsed: false
+    }, {
+      where: { id: documentId }
+    });
+  }
+}
 
 //getting the resume from lcoalStorage.(Jobseeker side)
 app.get("/getResume", authenticateToken, async(req, res) => {
@@ -545,6 +620,41 @@ app.get("/getResume", authenticateToken, async(req, res) => {
     console.log(err.message)
   }
 })
+
+// New endpoint to get parsed resume data
+app.get("/getResumeData/:documentId", authenticateToken, async(req, res) => {
+  const documentId = req.params.documentId;
+  
+  try {
+    const document = await Documents.findOne({
+      where: {
+        id: documentId,
+        userID: req.user.id
+      }
+    });
+    
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    
+    const parsedData = document.parsedData ? JSON.parse(document.parsedData) : null;
+    
+    res.status(200).json({
+      document: {
+        id: document.id,
+        fileName: document.fileName,
+        isParsed: document.isParsed || false,
+        parseFailed: document.parseFailed || false,
+        parseError: document.parseError
+      },
+      parsedData: parsedData
+    });
+    
+  } catch(err) {
+    console.log(err.message);
+    res.status(400).json({ message: err.message });
+  }
+});
 
 //Download Resume from localstorage and delete the file directory from database.(Jobseeker side)
 app.get("/downloadResume", authenticateToken, async(req, res) => {

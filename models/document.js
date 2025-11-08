@@ -11,7 +11,30 @@ Documents.init({
   docType: DataTypes.STRING,
   fileDir: DataTypes.STRING,
   fileName: DataTypes.STRING,
-  deletedAt: DataTypes.DATE
+  deletedAt: DataTypes.DATE,
+  // New fields for AI parsing with Affinda
+  parsedData: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'JSON string of parsed resume data from Affinda API'
+  },
+  isParsed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Whether the document has been successfully parsed by AI'
+  },
+  parseFailed: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Whether AI parsing failed for this document'
+  },
+  parseError: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Error message if parsing failed'
+  }
 }, {
   sequelize,
   modelName: 'Documents',

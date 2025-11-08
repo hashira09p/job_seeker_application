@@ -33,6 +33,9 @@ function ResumeUploadPage() {
   const [uploadError, setUploadError] = React.useState("")
   const [uploadSuccess, setUploadSuccess] = React.useState("")
   const [storedDocuments, setStoredDocuments] = React.useState([])
+  const [parsedResumeData, setParsedResumeData] = React.useState(null)
+  const [isParsingComplete, setIsParsingComplete] = React.useState(false)
+  const [isParsing, setIsParsing] = React.useState(false)
   const URL = "http://localhost:3000"
   const navigate = useNavigate()
 
@@ -48,6 +51,55 @@ function ResumeUploadPage() {
       fetchStoredDocuments();
     }
   }, []);
+
+  // Function to fetch parsed resume data
+  const fetchParsedData = async (documentId) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await axios.get(`${URL}/getResumeData/${documentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.data.document.isParsed) {
+        setParsedResumeData(response.data.parsedData)
+        setIsParsingComplete(true)
+        setIsParsing(false)
+        setUploadSuccess("Document uploaded and AI parsing completed! ✨")
+      } else if (response.data.document.parseFailed) {
+        setUploadError(`AI parsing failed: ${response.data.document.parseError}`)
+        setIsParsing(false)
+      } else {
+        // Still parsing
+        setIsParsing(true)
+      }
+    } catch (error) {
+      console.error('Error fetching parsed data:', error)
+      setIsParsing(false)
+    }
+  }
+
+  // Poll for parsing completion after upload
+  React.useEffect(() => {
+    if (storedDocuments.length > 0 && !isParsingComplete && isParsing) {
+      const latestDoc = storedDocuments[0]
+      const pollInterval = setInterval(() => {
+        fetchParsedData(latestDoc.id)
+      }, 3000) // Check every 3 seconds
+
+      // Clear interval after 60 seconds to prevent infinite polling
+      const timeout = setTimeout(() => {
+        clearInterval(pollInterval)
+        setIsParsing(false)
+      }, 60000)
+
+      return () => {
+        clearInterval(pollInterval)
+        clearTimeout(timeout)
+      }
+    }
+  }, [storedDocuments, isParsingComplete, isParsing])
 
   // Clean and normalize file path
   const cleanFilePath = (path) => {
@@ -201,8 +253,19 @@ function ResumeUploadPage() {
       
       setUploadSuccess('Document uploaded successfully!')
       
+      // Check if parsing is in progress
+      if (response.data.parsing) {
+        setIsParsing(true)
+        setUploadSuccess('Document uploaded successfully! AI is analyzing your resume... 🤖')
+      }
+      
       // Fetch the updated documents list from database after successful upload
       await fetchStoredDocuments()
+      
+      // Start polling for parsed data if we have a document ID
+      if (response.data.document && response.data.document.id) {
+        fetchParsedData(response.data.document.id)
+      }
       
       // Clear the temporary uploaded file state since we now have it in database
       setUploadedFile(null)
@@ -641,6 +704,225 @@ function ResumeUploadPage() {
             </CardContent>
           </Card>
         </form>
+
+        {/* AI Parsing Status */}
+        {isParsing && (
+          <Card className="shadow-lg border-0 mt-6 bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <div>
+                  <p className="font-semibold text-blue-900">AI is analyzing your resume...</p>
+                  <p className="text-sm text-blue-700">This usually takes 10-30 seconds</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Parsed Resume Data Display */}
+        {parsedResumeData && isParsingComplete && (
+          <Card className="shadow-lg border-0 mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                AI Parsed Resume Data
+              </CardTitle>
+              <CardDescription>
+                Automatically extracted information from your resume using AI
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Personal Information */}
+                {(parsedResumeData.name || parsedResumeData.email || parsedResumeData.phone) && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Personal Information
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedResumeData.name && (
+                        <div>
+                          <p className="text-sm text-gray-600">Name</p>
+                          <p className="font-medium">{parsedResumeData.name}</p>
+                        </div>
+                      )}
+                      {parsedResumeData.email && (
+                        <div>
+                          <p className="text-sm text-gray-600">Email</p>
+                          <p className="font-medium">{parsedResumeData.email}</p>
+                        </div>
+                      )}
+                      {parsedResumeData.phone && (
+                        <div>
+                          <p className="text-sm text-gray-600">Phone</p>
+                          <p className="font-medium">{parsedResumeData.phone}</p>
+                        </div>
+                      )}
+                      {parsedResumeData.location && (
+                        <div>
+                          <p className="text-sm text-gray-600">Location</p>
+                          <p className="font-medium">{parsedResumeData.location}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Professional Summary */}
+                {parsedResumeData.summary && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold mb-2">Professional Summary</h4>
+                    <p className="text-sm text-gray-700">{parsedResumeData.summary}</p>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {parsedResumeData.skills && parsedResumeData.skills.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Award className="h-4 w-4" />
+                      Skills ({parsedResumeData.skills.length})
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {parsedResumeData.skills.slice(0, 20).map((skill, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-sm">
+                          {skill.name}
+                        </Badge>
+                      ))}
+                      {parsedResumeData.skills.length > 20 && (
+                        <Badge variant="outline">+{parsedResumeData.skills.length - 20} more</Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Work Experience */}
+                {parsedResumeData.workExperience && parsedResumeData.workExperience.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Work Experience ({parsedResumeData.workExperience.length} positions)
+                    </h4>
+                    <div className="space-y-3">
+                      {parsedResumeData.workExperience.map((exp, idx) => (
+                        <div key={idx} className="p-4 bg-white rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-semibold text-lg">{exp.jobTitle}</p>
+                              <p className="text-gray-600">{exp.organization}</p>
+                            </div>
+                            {exp.isCurrent && (
+                              <Badge className="bg-green-100 text-green-800">Current</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 mb-2">
+                            {exp.startDate && new Date(exp.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })} - {exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : 'Present'}
+                            {exp.location && ` • ${exp.location}`}
+                          </p>
+                          {exp.description && (
+                            <p className="text-sm text-gray-700">{exp.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Education */}
+                {parsedResumeData.education && parsedResumeData.education.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Education ({parsedResumeData.education.length})</h4>
+                    <div className="space-y-3">
+                      {parsedResumeData.education.map((edu, idx) => (
+                        <div key={idx} className="p-4 bg-white rounded-lg border">
+                          <p className="font-semibold">{edu.degree}</p>
+                          <p className="text-gray-600">{edu.institution}</p>
+                          {edu.field && <p className="text-sm text-gray-500">{edu.field}</p>}
+                          {(edu.startDate || edu.endDate) && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {edu.startDate && new Date(edu.startDate).getFullYear()} - {edu.endDate ? new Date(edu.endDate).getFullYear() : 'Present'}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Certifications */}
+                {parsedResumeData.certifications && parsedResumeData.certifications.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Certifications ({parsedResumeData.certifications.length})</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parsedResumeData.certifications.map((cert, idx) => (
+                        <div key={idx} className="p-3 bg-white rounded-lg border">
+                          <p className="font-medium">{cert.name}</p>
+                          {cert.organization && <p className="text-sm text-gray-600">{cert.organization}</p>}
+                          {cert.date && <p className="text-xs text-gray-500">{new Date(cert.date).getFullYear()}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Languages */}
+                {parsedResumeData.languages && parsedResumeData.languages.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Languages ({parsedResumeData.languages.length})</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {parsedResumeData.languages.map((lang, idx) => (
+                        <Badge key={idx} variant="outline" className="text-sm">
+                          {lang.language}
+                          {lang.proficiency && ` - ${lang.proficiency}`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Total Years of Experience */}
+                {parsedResumeData.totalYearsExperience > 0 && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="font-semibold text-blue-900">
+                      Total Years of Experience: {parsedResumeData.totalYearsExperience} years
+                    </p>
+                  </div>
+                )}
+
+                {/* Links */}
+                {(parsedResumeData.linkedin || parsedResumeData.github || (parsedResumeData.websites && parsedResumeData.websites.length > 0)) && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Links & Profiles</h4>
+                    <div className="space-y-2">
+                      {parsedResumeData.linkedin && (
+                        <p className="text-sm">
+                          <strong>LinkedIn:</strong> <a href={parsedResumeData.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{parsedResumeData.linkedin}</a>
+                        </p>
+                      )}
+                      {parsedResumeData.github && (
+                        <p className="text-sm">
+                          <strong>GitHub:</strong> <a href={parsedResumeData.github} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{parsedResumeData.github}</a>
+                        </p>
+                      )}
+                      {parsedResumeData.websites && parsedResumeData.websites.length > 0 && (
+                        <div>
+                          <strong className="text-sm">Websites:</strong>
+                          {parsedResumeData.websites.map((website, idx) => (
+                            <p key={idx} className="text-sm ml-4">
+                              <a href={website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{website}</a>
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Only show "Ready to Find Your Dream Job?" section if user is NOT logged in */}
         {!isUserLoggedIn() && (

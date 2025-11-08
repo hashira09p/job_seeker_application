@@ -1,0 +1,268 @@
+{
+  "data": {
+    "certifications": [],
+    "dateOfBirth": null,
+    "education": [],
+    "emails": [],
+    "location": null,
+    "name": {
+      "raw": "",
+      "last": "",
+      "first": "",
+      "title": "",
+      "middle": ""
+    },
+    "objective": "",
+    "phoneNumbers": [],
+    "phoneNumberDetails": [],
+    "publications": [],
+    "referees": [
+      {
+        "name": "Bill",
+        "text": "Bill",
+        "email": null,
+        "number": null,
+        "position": null
+      }
+    ],
+    "sections": [
+      {
+        "sectionType": "Other",
+        "pageIndex": 0,
+        "text": "50.01 Generate Bill - OR Electric Commercial SG Net Rate O84CLB ",
+        "bbox": [
+          98.80899,
+          84.23999,
+          513.224,
+          95.40796
+        ]
+      },
+      {
+        "sectionType": "PersonalDetails",
+        "pageIndex": 0,
+        "text": "TC ID: 262716 Account ID: 3815254037 SA ID: 3817471143 Rate Schedule: O84CL Start Option: O84CLB ",
+        "bbox": [
+          72.10899,
+          110.21796,
+          191.137,
+          220.02405
+        ]
+      },
+      {
+        "sectionType": "WorkExperience",
+        "pageIndex": 1,
+        "text": "Added reads for 4-14-25 – 5-14-25 period. ",
+        "bbox": [
+          72.229,
+          75.07202,
+          276.282,
+          85.52405
+        ]
+      },
+      {
+        "sectionType": "Referees",
+        "pageIndex": 1,
+        "text": "Generate Bill ",
+        "bbox": [
+          72.55299,
+          290.77002,
+          133.99298,
+          299.14603
+        ]
+      },
+      {
+        "sectionType": "PersonalDetails",
+        "pageIndex": 2,
+        "text": "Bill segment in freezable status. Bill ID: 381380656118 ",
+        "bbox": [
+          73.033,
+          75.07202,
+          224.72899,
+          108.49603
+        ]
+      },
+      {
+        "sectionType": "Projects",
+        "pageIndex": 2,
+        "text": "Verify in the Bill Segment page: Service Agreement: OECOMSGN O84CL w / BPA Bill Period: 04-14-2025 – 05-14-2025 Usage Period: 04-14-2025 – 05-14-2025 Current Amount: $17.39 ",
+        "bbox": [
+          72.157,
+          333.72202,
+          297.9,
+          443.37802
+        ]
+      },
+      {
+        "sectionType": "PersonalDetails",
+        "pageIndex": 2,
+        "text": "Premise Address: Service Address ",
+        "bbox": [
+          73.033,
+          458.694,
+          234.986,
+          467.04602
+        ]
+      },
+      {
+        "sectionType": "Other",
+        "pageIndex": 3,
+        "text": "Verify in SQ Details: UOM: KWH # days between start and end read: 30 Days Measured Quantity: 120 – Delivered, 50 - Received \n\nVerify in Calc Lines: Amount: $17.39 Rate Version: OR Small Net Energy Metering Legacy \nNote: ",
+        "bbox": [
+          72.157,
+          75.07202,
+          321.409,
+          465.16602
+        ]
+      },
+      {
+        "sectionType": "Projects",
+        "pageIndex": 3,
+        "text": "Start date and End date - known issue being addressed and will be tested in Rates ",
+        "bbox": [
+          101.520996,
+          456.79,
+          495.61,
+          467.194
+        ]
+      },
+      {
+        "sectionType": "Other",
+        "pageIndex": 3,
+        "text": "Calculations Validations ",
+        "bbox": [
+          72.69699,
+          473.67,
+          187.20099,
+          482.04602
+        ]
+      },
+      {
+        "sectionType": "WorkExperience",
+        "pageIndex": 4,
+        "text": "Verify Calculation Group: AMI - LEGACY - SCALAR \n\nVerify in completed Bill: Due Date: Bill date + 18 = June 2 Late Payment Charge: Due date + 18 = June 20 \n\nVerify Bill Summary details: Previous Periods Balance: $0 Total Payments: $0 Total Adjustments: $0 Total Bill Corrections: $0 Total Current Billing Charges: $17.39 Ending Balance for This Period: $17.39 ",
+        "bbox": [
+          72.10899,
+          75.07202,
+          297.31998,
+          718.974
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "id": 1175307073,
+        "emsiId": "KS121056X529461ZF6XW",
+        "name": "Billing",
+        "lastUsed": null,
+        "numberOfMonths": null,
+        "type": "specialized_skill",
+        "sources": [
+          {
+            "section": "WorkExperience",
+            "position": null,
+            "workExperienceId": null
+          }
+        ]
+      },
+      {
+        "id": 1175307074,
+        "emsiId": "KS121BM6VGMJPK7X7938",
+        "name": "Calculations",
+        "lastUsed": null,
+        "numberOfMonths": null,
+        "type": "specialized_skill",
+        "sources": [
+          {
+            "section": "WorkExperience",
+            "position": null,
+            "workExperienceId": null
+          }
+        ]
+      }
+    ],
+    "languages": [
+      "English"
+    ],
+    "summary": "",
+    "websites": [],
+    "linkedin": null,
+    "totalYearsExperience": 0,
+    "profession": null,
+    "workExperience": [],
+    "headShot": null,
+    "isResumeProbability": null,
+    "rawText": "50.01 Generate Bill - OR Electric Commercial SG Net Rate O84CLB \nTC ID: 262716 Account ID: 3815254037 SA ID: 3817471143 Rate Schedule: O84CL Start Option: O84CLB \nAdded reads for 4-14-25 – 5-14-25 period. \nGenerate Bill \nBill segment in freezable status. Bill ID: 381380656118 \nVerify in the Bill Segment page: Service Agreement: OECOMSGN O84CL w / BPA Bill Period: 04-14-2025 – 05-14-2025 Usage Period: 04-14-2025 – 05-14-2025 Current Amount: $17.39 \nPremise Address: Service Address \nVerify in SQ Details: UOM: KWH # days between start and end read: 30 Days Measured Quantity: 120 – Delivered, 50 - Received \n\nVerify in Calc Lines: Amount: $17.39 Rate Version: OR Small Net Energy Metering Legacy \nNote: \nStart date and End date - known issue being addressed and will be tested in Rates \nCalculations Validations \nVerify Calculation Group: AMI - LEGACY - SCALAR \n\nVerify in completed Bill: Due Date: Bill date + 18 = June 2 Late Payment Charge: Due date + 18 = June 20 \n\nVerify Bill Summary details: Previous Periods Balance: $0 Total Payments: $0 Total Adjustments: $0 Total Bill Corrections: $0 Total Current Billing Charges: $17.39 Ending Balance for This Period: $17.39 ",
+    "redactedText": "50.01 Generate Bill - OR Electric Commercial SG Net Rate O84CLB\nTC ID: ****** Account ID: ********** SA ID: ********** Rate Schedule: O84CL Start Option: O84CLB\nAdded reads for 4-14-25 – 5-14-25 period.\n******** ****\nBill segment in freezable status. Bill ID: ************\nVerify in the Bill Segment page: Service Agreement: OECOMSGN O84CL w / BPA Bill Period: ********** – ********** Usage Period: ********** – ********** Current Amount: $17.39\nPremise Address: Service Address\nVerify in SQ Details: UOM: KWH # days between start and end read: 30 Days Measured Quantity: 120 – Delivered, 50 - Received Verify in Calc Lines: Amount: $17.39 Rate Version: OR Small Net Energy Metering Legacy Note:\nStart date and End date - known issue being addressed and will be tested in Rates\nCalculations Validations\nVerify Calculation Group: AMI - LEGACY - SCALAR Verify in completed Bill: Due Date: Bill date + 18 = June 2 Late Payment Charge: Due date + 18 = June 20 Verify Bill Summary details: Previous Periods Balance: $0 Total Payments: $0 Total Adjustments: $0 Total Bill Corrections: $0 Total Current Billing Charges: $17.39 Ending Balance for This Period: $17.39"
+  },
+  "meta": {
+    "identifier": "ZipjDBFl",
+    "customIdentifier": null,
+    "ready": true,
+    "failed": false,
+    "readyDt": "2025-11-05T15:08:17.662878Z",
+    "fileName": "1762185258031.docx",
+    "expiryTime": null,
+    "language": "en",
+    "pdf": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/documents/converted_j8cIlD5.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=51d205202d7724ddebe47a7edd28a32bf2bf46400412c9bf6d399a39b02fd422",
+    "parentDocument": null,
+    "childDocuments": [],
+    "pages": [
+      {
+        "id": 149624737,
+        "pageIndex": 0,
+        "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149624737_JO6oPQK.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=e826458f9a8e431c330f6f211a97e1b1ad581a6c5aa6a9e47759a360296e06fc",
+        "height": 792,
+        "width": 612,
+        "rotation": 0
+      },
+      {
+        "id": 149624738,
+        "pageIndex": 1,
+        "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149624738_C2nDmnR.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=bc844f342cfa735a336fec6aefd70ee59b67b60a41b76d71810664420392e377",
+        "height": 792,
+        "width": 612,
+        "rotation": 0
+      },
+      {
+        "id": 149624739,
+        "pageIndex": 2,
+        "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149624739_PsJ150Y.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=355a7a84bf8415884ab86829e9b1213b7f4d56e0d24ed42b7f1c7a5133462abc",
+        "height": 792,
+        "width": 612,
+        "rotation": 0
+      },
+      {
+        "id": 149624740,
+        "pageIndex": 3,
+        "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149624740_T9lJrYw.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=33c9fd15b6bced1b0a175bc8b199fe3ac9184e7c0c9a3250411495675a784f46",
+        "height": 792,
+        "width": 612,
+        "rotation": 0
+      },
+      {
+        "id": 149624741,
+        "pageIndex": 4,
+        "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149624741_ATd9UFF.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=c92bf159f1ba48f985969d69caf106bb7b3c87c453988432735a0a6fb54b65a1",
+        "height": 792,
+        "width": 612,
+        "rotation": 0
+      }
+    ],
+    "ocrConfidence": null,
+    "reviewUrl": "https://app.affinda.com/review/69683326?document_signature=eyJkb2N1bWVudF9pZCI6Njk2ODMzMjYsIndvcmtzcGFjZV9pZCI6MTE0NzA2OCwib3JnYW5pemF0aW9uX2lkIjozMjk2MSwiZGVsZWdhdGluZ191c2VyX2lkIjoyNjE0NX0:1vGf7R:9CAJp2NPZzdDy4Ae6ImDX4oVmOOKxGSRaF9MGk1KNxI:1vGf7R:-LWs5cfZ1Cf7HTtURrwZdIgpj8drrMdFUf679TYrhlo",
+    "validatedDt": null,
+    "isVerified": false,
+    "exportedDt": null,
+    "isExported": false,
+    "createdDt": "2025-11-05T15:08:13.176710Z",
+    "errorDetail": null,
+    "documentType": "resume",
+    "file": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/documents/1762185258031_92Z8JJe.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNNNLTI47D%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T150817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkcwRQIgJOf8BBhBg8LuzBw5qHC95JtBk%2BB7xuT%2FQlocZDs%2FgjECIQCplXjLv2n84O9A2ma1lR49Tlju1hN0%2F6FRUDNLmOrdrCqUBQiQ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIM98NOTFVraQCjF4ENKugEbaJhaJBPM%2Fya00PlRLArOG6NvTOESk70wLfXA3MVcfFXWMkmHbyhBXXyspj42qfLe9JpiOvI%2FSPVw1mvmuquI%2BHMch3yGCViEU8E16DUJxqMmFNqlIt7CblHX8UUCIrVHCFEPuuGczHFw4Zhm%2BRUBcr%2BBGYvP0vvdGy6BlbZTXvYuJSsz1hpN8ylSHKJt5MHASUjkgzT4SWjHMAmr6MsqKu9ziGnH%2FN8obPoRUxtE0ec0usrgnsmMG9d7u1HkQ5x61Kqkv3%2FlRYHFoc1eNTPzJ%2Be0QmnahWInZG4DwwYLdXObbj%2Bg%2B4FUzoqhwEpGvluNny52R2Nqc9rP3k9eFUKPYmmd8MwPJP3Fbj%2ByDXFeF1rZbpgOodewVK%2F7UoiLXFCyAqntthp%2BUhI%2Fot1CIFup6O%2BKj5W8IBoDYiYq1D06ivoTQcdnZw4s8A7DKESfdOOqoykc%2FahsmJB3yJstvit4UszOlyr1da8fYf63UQNRUMzukn0nLfMmgIw8zuYv3K7YPopu8Zx%2FhYCruLqEJFQEm9tTHro0SI2jOU6pNmV6e%2Bdyd3QcccoBoJobNRtFpi1fTkplYHqwpNYL%2Bv%2BVIjgpy9%2FRsWyZcCHFQqACloJRyb75KoLejFk6jK7TjJoErTF8uCqZapKNrp%2BNxBiav24g76s%2Fgz8sUUy2ETdoJGBXo5seqlEkTzgMZEX8KDBk1TZTj3QaeeHxzJlvZ9LqYLOIBIFjF8htfvdCmr9WInQcyJJWmU3POemLLWshTNe4QoC1ePtVzzllofOEGK1PYjiNaPiyX6GY%2BppHxXJLCO159DtnCBQCit9HjDvyq3IBjqYAUNuCgG7qkfzjg163IYhQ8z9VLVighSTdoUPVeRbAz8dyWayHkEkVkFEBBoUQw%2F48omfHLPeh7yeYIGqSiBSuDTEi4iz%2Fc1mWDXhbiPyqs0bWwQ4L00JSO3BR8e1mpFZmF8l5AMStGgbL8Fw%2FDhH00M%2FgCeIzVSEa1MfqZ1ztD8fXSXkXyA0V4q46mMnelnR4BTwy848OMlU&X-Amz-Signature=b1aca400021f4fd0aadd1819babe19dcfc060707ed2d20ca81f85fa1beb1befb",
+    "regionBias": null,
+    "isOcrd": false
+  },
+  "error": {
+    "errorCode": null,
+    "errorDetail": null
+  }
+}
