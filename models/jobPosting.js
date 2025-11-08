@@ -31,6 +31,7 @@ JobPostings.associate = (models) => {
     foreignKey: "JobPostingId",
     as: "applicant", onDelete: "CASCADE" 
   })
+  
 }
 
 export default JobPostings;

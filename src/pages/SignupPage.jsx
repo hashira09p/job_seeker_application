@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Phone, Building, ArrowLeft } from "lucide-react";
+import { Mail, Lock, User, Phone, Building, ArrowLeft, Upload } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -26,6 +26,9 @@ function SignupPage() {
     website: "",
     arrangement: ""
   });
+  const [document, setDocument] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     async function authenticate() {
@@ -42,37 +45,101 @@ function SignupPage() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear errors when user starts typing
+    if (errors[e.target.name]) {
+      setErrors({
+        ...errors,
+        [e.target.name]: ""
+      });
+    }
+  };
+
+  const handleDocumentChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setDocument(e.target.files[0]);
+      // Clear document error when file is selected
+      if (errors.document) {
+        setErrors({
+          ...errors,
+          document: ""
+        });
+      }
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Basic validation for all fields
+    if (!formData.firstName) newErrors.firstName = "First name is required";
+    if (!formData.lastName) newErrors.lastName = "Last name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.password) newErrors.password = "Password is required";
+
+    // Employer-specific validation
+    if (formData.role === "Employer") {
+      if (!formData.companyName) newErrors.companyName = "Company name is required";
+      if (!formData.industry) newErrors.industry = "Industry is required";
+      if (!formData.arrangement) newErrors.arrangement = "Arrangement is required";
+      if (!document) newErrors.document = "Company document is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setUploading(true);
+    
     try {
+      // Create FormData to handle file upload
+      const submitData = new FormData();
+      
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        submitData.append(key, formData[key]);
+      });
+      
+      // Append document if exists (required for employers)
+      if (document) {
+        submitData.append('document', document);
+      }
+
       const result = await axios({
         url: `${URL}/submit-signup`,
         method: "post",
-        data: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          companyName: formData.companyName,
-          description: formData.description,
-          industry: formData.industry,
-          website: formData.website,
-          arrangement: formData.arrangement
+        data: submitData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
         },
       });
+      
       console.log(result);
       navigate("/login");
     } catch (err) {
       console.log(err.message);
+      if (err.response?.data?.message) {
+        setErrors({ submit: err.response.data.message });
+      }
+    } finally {
+      setUploading(false);
     }
   };
 
   const roleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.role) {
+      setErrors({ role: "Please select a role" });
+      return;
+    }
     setRole(formData.role);
+    setErrors({});
   };
 
   return (
@@ -108,21 +175,25 @@ function SignupPage() {
                     htmlFor="role"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Role
+                    Role *
                   </label>
                   <select
                     id="role"
                     name="role"
                     required
-                    className="w-full rounded-md border border-gray-300 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                      errors.role ? "border-red-500" : "border-gray-300"
+                    }`}
                     onChange={handleChange}
                     value={formData.role}
                   >
                     <option value="">Select a role</option>
                     <option value="JobSeeker">Job Seeker</option>
                     <option value="Employer">Employer</option>
-
                   </select>
+                  {errors.role && (
+                    <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+                  )}
                 </div>
 
                 <Button
@@ -164,7 +235,7 @@ function SignupPage() {
                       htmlFor="first-name"
                       className="block text-sm font-medium text-foreground mb-2"
                     >
-                      First Name
+                      First Name *
                     </label>
                     <Input
                       type="text"
@@ -174,14 +245,18 @@ function SignupPage() {
                       placeholder="Enter your first name"
                       onChange={handleChange}
                       value={formData.firstName}
+                      className={errors.firstName ? "border-red-500" : ""}
                     />
+                    {errors.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+                    )}
                   </div>
                   <div>
                     <label
                       htmlFor="lastname"
                       className="block text-sm font-medium text-foreground mb-2"
                     >
-                      Last Name
+                      Last Name *
                     </label>
                     <Input
                       type="text"
@@ -191,7 +266,11 @@ function SignupPage() {
                       placeholder="Enter your last name"
                       onChange={handleChange}
                       value={formData.lastName}
+                      className={errors.lastName ? "border-red-500" : ""}
                     />
+                    {errors.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
+                    )}
                   </div>
                 </div>
 
@@ -200,7 +279,7 @@ function SignupPage() {
                     htmlFor="email"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Email
+                    Email *
                   </label>
                   <Input
                     type="email"
@@ -210,7 +289,11 @@ function SignupPage() {
                     placeholder="m@example.com"
                     onChange={handleChange}
                     value={formData.email}
+                    className={errors.email ? "border-red-500" : ""}
                   />
+                  {errors.email && (
+                    <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -218,7 +301,7 @@ function SignupPage() {
                     htmlFor="password"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Password
+                    Password *
                   </label>
                   <Input
                     type="password"
@@ -228,7 +311,11 @@ function SignupPage() {
                     placeholder="Create a password"
                     onChange={handleChange}
                     value={formData.password}
+                    className={errors.password ? "border-red-500" : ""}
                   />
+                  {errors.password && (
+                    <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                  )}
                 </div>
 
                 <div className="flex items-start">
@@ -260,11 +347,18 @@ function SignupPage() {
                   </label>
                 </div>
 
+                {errors.submit && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-red-600 text-sm">{errors.submit}</p>
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   className="w-full py-3 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  disabled={uploading}
                 >
-                  Create Account
+                  {uploading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
 
@@ -344,47 +438,55 @@ function SignupPage() {
               <form className="space-y-6" onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Email
-                  </label>
-                  <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    placeholder="Enter your company email"
-                    onChange={handleChange}
-                    value={formData.email}
-                  />
-                </div>
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-medium text-foreground mb-2"
+                    >
+                      Email *
+                    </label>
+                    <Input
+                      type="email"
+                      id="email"
+                      name="email"
+                      required
+                      placeholder="Enter your company email"
+                      onChange={handleChange}
+                      value={formData.email}
+                      className={errors.email ? "border-red-500" : ""}
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                    )}
+                  </div>
 
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Password
-                  </label>
-                  <Input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    placeholder="Create a password"
-                    onChange={handleChange}
-                    value={formData.password}
-                  />
-                </div>
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium text-foreground mb-2"
+                    >
+                      Password *
+                    </label>
+                    <Input
+                      type="password"
+                      id="password"
+                      name="password"
+                      required
+                      placeholder="Create a password"
+                      onChange={handleChange}
+                      value={formData.password}
+                      className={errors.password ? "border-red-500" : ""}
+                    />
+                    {errors.password && (
+                      <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                    )}
+                  </div>
 
                   <div>
                     <label
                       htmlFor="first-name"
                       className="block text-sm font-medium text-foreground mb-2"
                     >
-                      First Name
+                      First Name *
                     </label>
                     <Input
                       type="text"
@@ -394,14 +496,18 @@ function SignupPage() {
                       placeholder="Enter your first name"
                       onChange={handleChange}
                       value={formData.firstName}
+                      className={errors.firstName ? "border-red-500" : ""}
                     />
+                    {errors.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+                    )}
                   </div>
                   <div>
                     <label
                       htmlFor="lastname"
                       className="block text-sm font-medium text-foreground mb-2"
                     >
-                      Last Name
+                      Last Name *
                     </label>
                     <Input
                       type="text"
@@ -411,7 +517,11 @@ function SignupPage() {
                       placeholder="Enter your last name"
                       onChange={handleChange}
                       value={formData.lastName}
+                      className={errors.lastName ? "border-red-500" : ""}
                     />
+                    {errors.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
+                    )}
                   </div>
                 </div>
 
@@ -420,7 +530,7 @@ function SignupPage() {
                     htmlFor="companyName"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Company Name
+                    Company Name *
                   </label>
                   <Input
                     type="text"
@@ -430,7 +540,11 @@ function SignupPage() {
                     placeholder="Input your company"
                     onChange={handleChange}
                     value={formData.companyName}
+                    className={errors.companyName ? "border-red-500" : ""}
                   />
+                  {errors.companyName && (
+                    <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>
+                  )}
                 </div>
 
                 <div>
@@ -455,7 +569,7 @@ function SignupPage() {
                     htmlFor="industry"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Industry
+                    Industry *
                   </label>
                   <Input
                     type="text"
@@ -465,7 +579,11 @@ function SignupPage() {
                     required
                     onChange={handleChange}
                     value={formData.industry}
+                    className={errors.industry ? "border-red-500" : ""}
                   />
+                  {errors.industry && (
+                    <p className="text-red-500 text-xs mt-1">{errors.industry}</p>
+                  )}
                 </div>
 
                 <div>
@@ -490,13 +608,15 @@ function SignupPage() {
                     htmlFor="arrangement"
                     className="block text-sm font-medium text-foreground mb-2"
                   >
-                    Arrangement
+                    Arrangement *
                   </label>
                   <select
                     id="arrangement"
                     name="arrangement"
                     required
-                    className="w-full rounded-md border border-gray-300 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                      errors.arrangement ? "border-red-500" : "border-gray-300"
+                    }`}
                     onChange={handleChange}
                     value={formData.arrangement}
                   >
@@ -505,10 +625,43 @@ function SignupPage() {
                     <option value="Hybrid">Hybrid</option>
                     <option value="Remote">Remote</option>
                     <option value="Flexible">Flexible</option>
-
                   </select>
+                  {errors.arrangement && (
+                    <p className="text-red-500 text-xs mt-1">{errors.arrangement}</p>
+                  )}
                 </div>
 
+                {/* Document Upload Field for Employers - REQUIRED */}
+                <div>
+                  <label
+                    htmlFor="document"
+                    className="block text-sm font-medium text-foreground mb-2"
+                  >
+                    Company Document *
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="file"
+                      id="document"
+                      name="document"
+                      required
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      onChange={handleDocumentChange}
+                      className={`flex-1 ${errors.document ? "border-red-500" : ""}`}
+                    />
+                    {document && (
+                      <span className="text-sm text-green-600">
+                        ✓ {document.name}
+                      </span>
+                    )}
+                  </div>
+                  {errors.document && (
+                    <p className="text-red-500 text-xs mt-1">{errors.document}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Upload company registration document, license, or other relevant files (PDF, DOC, JPG, PNG)
+                  </p>
+                </div>
 
                 <div className="flex items-start">
                   <input
@@ -539,11 +692,18 @@ function SignupPage() {
                   </label>
                 </div>
 
+                {errors.submit && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-red-600 text-sm">{errors.submit}</p>
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   className="w-full py-3 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  disabled={uploading}
                 >
-                  Create Account
+                  {uploading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
             </div>

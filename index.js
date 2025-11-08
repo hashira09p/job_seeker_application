@@ -15,15 +15,27 @@ import { FileEdit, Trophy } from 'lucide-react';
 import multer from "multer"
 import fs from "fs"
 import path from 'path';
+import {Server} from "socket.io"
+import http from "http";
 
 dotenv.config()
 
 const {Users, Companies, JobPostings, Documents, Applicants} = db
 const port = 3000;
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server,{
+  cors: {
+    origin: "http://localhost:5173"
+  }
+})
 const saltRounds = 15;
 const JWT_SECRET = "just_a_secret"
 const uploadDir = "uploads/resumes"
+
+io.on("connection", (socket) => {
+  console.log("User connected", socket.id);
+});
 
 if(!fs.existsSync(uploadDir)){
   fs.mkdirSync(uploadDir, {recursive: true})
@@ -35,7 +47,7 @@ const storage = multer.diskStorage({
 })
 
 const upload = multer({storage, limits:{
-  fieldSize:  5 * 1024 * 1024 //50MB
+  fieldSize:  50 * 1024 * 1024 //50MB
 }})
 
 app.use(session(
@@ -97,8 +109,9 @@ app.get("/auth/google/app",
 
 
 // Signup
-app.post("/submit-signup", async (req, res) => {
+app.post("/submit-signup", upload.single("document"), async (req, res) => {
   try {
+    const {filename, destination} = req.file || {}
     const { firstName, lastName, description, companyName, email,password, role, industry,  website, arrangement} = req.body;
 
     console.log(companyName);
@@ -125,27 +138,51 @@ app.post("/submit-signup", async (req, res) => {
 
     bcrypt.hash(password, saltRounds, async function (err, hash) {
       if (!err) {
-        const result=await Users.create({
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          password: hash,
-          role: role,
-          fullName: `${firstName} ${lastName}`
-        });
           
         if(role == "Employer"){
+          const user =await Users.create({
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: hash,
+            role: role,
+            fullName: `${firstName} ${lastName}`,
+            approved: "underReview"
+          });
+
+          console.log(user.id)
+
           await Companies.create({
             name: companyName,
             description: description,
-            userID: result.id,
+            userID: user.id,
             industry: industry,
             website: website,
             arrangement: arrangement
           })
+
+          if(req.file) {
+            await Documents.create({
+              userID: user.id,
+              docType: path.extname(filename), 
+              filename: filename,
+              fileDir: req.file.path
+            });
+          }
+        }else{
+          const user = await Users.create({
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: hash,
+            role: role,
+            fullName: `${firstName} ${lastName}`,
+            approved: "pass"
+          });
+
+          console.log(user.id)
         }
         
-        console.log(result.id)
         res.send("Saved Success");
       } else {
         console.log(err.message);
@@ -169,10 +206,8 @@ app.post("/submit-login", async(req, res) => {
         email: email
       }
     })
-    
-    
 
-    console.log(user)
+    // console.log(user)
     
     if (user == null) { 
       console.log("User not registered.")
@@ -180,13 +215,15 @@ app.post("/submit-login", async(req, res) => {
     }
 
     const role = user.role
+    const approved = user.approved
+    console.log(approved)
 
     await bcrypt.compare(password, user.password, async(err, result) => {
       //this console.log will say false if it is wrong password
-      console.log(result)
+      // console.log(result)
       if (result){
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "5h" })
-        res.status(200).json({success: result, message: "success", token, role})
+        res.status(200).json({success: result, message: "success", token, role, approved})
       }else{
         res.status(400).json({success: result, message: "wrong password"})
       }
@@ -253,6 +290,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
   }
 });
 
+// Getting all of the applicants in employer side
 app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
   const JobPostingId = req.params.id
 
@@ -286,23 +324,85 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
 
 //Update the status of applicants from Employer Side
 app.patch("/applicants/:id", authenticateToken, async(req,res) => {
-  const applicantId = req.params.id
-  const status = req.body.status
-  try{
-    const result = Applicants.update({
-      status: status
-    },{
-      where:{
-        id: applicantId
-      }
-    })
+    const applicantId = req.params.id
+    const status = req.body.status
+    try{
+        const result = await Applicants.update({
+          status: status
+        }, {
+          where: {
+            id: applicantId
+          }
+        })
 
-    res.status(200).json({message: "Ok"})
-  }catch(err){
-    res.status(400).json({message: err.message})
-  }
+        const applicant = await Applicants.findOne({
+          where: {
+            id: applicantId
+          },
+          include: {
+            model: JobPostings,
+            attributes: ["companyID","title"]
+          }
+        })
+
+        const company = await Companies.findOne({
+          where: {
+            id: applicant.JobPosting.companyID
+          }
+        })
+
+        const companyName = company.name
+        const applicationStatus = applicant.status
+
+        console.log(companyName)
+        
+        io.emit("applicationStatusUpdated", {
+          applicationId: applicantId,
+          jobTitle: applicant.JobPosting.title,
+          company: companyName, 
+          status: applicationStatus,
+          userId: applicant.userId 
+        })
+
+        res.status(200).json({message: "Ok"})
+    } catch(err) {
+        res.status(400).json({message: err.message})
+    }
 })
 
+// Corrected backend route - /app/applied-jobs
+app.get("/applied-jobs", authenticateToken, async (req, res) => { 
+    try { 
+        const currentUser = req.user.id; 
+        console.log("🔄 Fetching applications for user:", currentUser); 
+        
+        const applications = await Applicants.findAll({ 
+            where: { userID: currentUser }, 
+            include: [ 
+                { 
+                    model: JobPostings, 
+                    include: [ 
+                        { model: Companies, as: "company" } 
+                    ] 
+                } 
+            ],
+            order: [['createdAt', 'DESC']]
+        }); 
+        
+        console.log("✅ Found applications:", applications.length); 
+        console.log("📦 Applications data:", JSON.stringify(applications, null, 2)); 
+        
+        res.status(200).json({ 
+            message: "success", 
+            userApplications: applications 
+        }); 
+    } catch (err) { 
+        console.log("❌ Error fetching applications:", err.message); 
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Creating jobposting employer side
 app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
   const {title, description, location, type, salaryMin, salaryMax} = req.body
 
@@ -334,6 +434,7 @@ app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
   }
 });
 
+// Updating jobposting employer side
 app.patch("/jobPostings/:id", authenticateToken, async(req,res) => {
   const {title, location, description, type, status, salaryMin, salaryMax} = req.body;
   
@@ -361,6 +462,7 @@ app.patch("/jobPostings/:id", authenticateToken, async(req,res) => {
   }
 })
 
+// Deleting jobposting employer side
 app.delete("/jobPostings/:id", authenticateToken, async(req,res) => {
   const jobPostingID = req.params.id
   try{
@@ -377,7 +479,7 @@ app.delete("/jobPostings/:id", authenticateToken, async(req,res) => {
 })
 
 //User
-//Company Page for User side
+//Company Page for Jobseeker side
 app.get("/companies", async(req, res) => {
   try{
     const result = await Companies.findAll()
@@ -387,8 +489,7 @@ app.get("/companies", async(req, res) => {
   }
 })
 
-//jobPosting for User side
-
+//jobPosting for Jobseeker side
 app.get("/jobs", async(req, res) => {
   try{
     const jobPosting = await JobPostings.findAll(
@@ -402,15 +503,15 @@ app.get("/jobs", async(req, res) => {
           attributes:['name', "industry"]
         }
       })
-    // console.log(jobPosting)
+    console.log(jobPosting)
     res.status(200).json({message: "OK", jobPosting})
   }catch(err){
     console.log(err.message)
   }
 })
 
-//Saving the resume to backend
-app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(req, res) => {
+//Saving the resume to backend. (Jobseeker side)
+app.post("/uploadResume", authenticateToken, upload.single("document"), async(req, res) => {
   const {filename, destination} = req.file
   
   try{
@@ -429,7 +530,7 @@ app.post("/uploadResume", authenticateToken, upload.single("resumeFile"),async(r
   }
 })
 
-//getting the resume from lcoalStorage 
+//getting the resume from lcoalStorage.(Jobseeker side)
 app.get("/getResume", authenticateToken, async(req, res) => {
   try{
     const documents = await Documents.findAll({
@@ -445,7 +546,7 @@ app.get("/getResume", authenticateToken, async(req, res) => {
   }
 })
 
-//Download Resume from localstorage and delete the file directory from database
+//Download Resume from localstorage and delete the file directory from database.(Jobseeker side)
 app.get("/downloadResume", authenticateToken, async(req, res) => {
   try {
     const result = await Documents.findOne({
@@ -544,6 +645,7 @@ app.get("/applicants/resume/:id", authenticateToken, async(req, res) => {
   }
 });
 
+//Deleting Resume(Jobseeker Side)
 app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
   const documentId = req.params.id;
   
@@ -564,7 +666,7 @@ app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
   }
 })
 
-//Passing application for User side
+//Passing application for Jobseeker side
 app.post("/application-submit", authenticateToken, async(req, res) => {
   const {fullName, email, phone, coverLetter, jobPostingID} = req.body
   const userID = req.user.id
@@ -662,6 +764,6 @@ passport.deserializeUser(async(id, done) => {
   }
 })
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running in port ${port}`)
 })

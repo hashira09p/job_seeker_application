@@ -182,7 +182,7 @@ function ResumeUploadPage() {
 
     try {
       const formData = new FormData()
-      formData.append("resumeFile", uploadedFile)
+      formData.append("document", uploadedFile)
 
       const token = localStorage.getItem("token")
 
@@ -303,7 +303,7 @@ function ResumeUploadPage() {
       const token = localStorage.getItem("token");
       
       // Use the API endpoint for downloading
-      const response = await axios.get(`${URL}/applicants/${documentId}/resume`, {
+      const response = await axios.get(`${URL}/jobSeeker/${documentId}/resume`, {
         headers: {
           Authorization: `Bearer ${token}`
         },

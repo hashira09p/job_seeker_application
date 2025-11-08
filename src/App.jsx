@@ -13,6 +13,7 @@ import AdminPage from './pages/AdminPage'
 import ResumeUploadPage from './pages/ResumeUploadPage'
 import CompanyDashboardPage from './pages/CompanyDashboardPage'
 import AdminLoginPage from './pages/AdminLoginPage'
+import AppliedJobsPage from './pages/AppliedJobsPage'
 
 
 
@@ -35,6 +36,7 @@ function App() {
             <Route path="/upload-resume" element={<ResumeUploadPage />} />
             <Route path="/company-dashboard" element={<CompanyDashboardPage />} />
             <Route path="/admin-login" element={<AdminLoginPage />} />
+            <Route path="/applied-jobs" element={<AppliedJobsPage />} />
           </Routes>
         </div>
       </Router>

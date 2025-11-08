@@ -332,6 +332,8 @@ function CompanyDashboardPage() {
   // Download the Applicants Resume
   const handleDownloadResume = async (applicant) => {
     const token = localStorage.getItem("token");
+    console.log(applicant.Document?.id)
+
     const applicantDocumentId = applicant.Document?.id;
     
     if (!applicantDocumentId) {
