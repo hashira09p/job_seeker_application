@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 
 dotenv.config();
 
-const sequelize = new Sequelize("una_sa_trabaho_app", "postgres", process.env.DATABASE_PASSWORD || "password123", {
+const sequelize = new Sequelize("una_sa_trabaho_app", "postgres", process.env.DATABASE_PASSWORD || "123456", {
     host: "localhost",
     dialect: "postgres",
     logging: false
