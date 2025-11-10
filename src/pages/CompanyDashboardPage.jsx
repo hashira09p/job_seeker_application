@@ -27,7 +27,7 @@ import {
   Filter, MoreHorizontal, Eye, Edit, Trash2, Calendar, Mail, Phone, MapPin,
   Building, DollarSign, Clock, BarChart3, Settings, Home, Menu, Download, Star,
   Target, Award, CheckCircle, XCircle, Clock3, UserCheck, UserX, MessageSquare,
-  ExternalLink, Upload, Sparkles, AlertCircle, ArrowLeft, Plus, LogOut, Bell
+  ExternalLink, Upload, Sparkles, AlertCircle, ArrowLeft, Plus, LogOut, Bell, X
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell
@@ -1018,6 +1018,13 @@ function CompanyDashboardPage() {
     poll();
   };
 
+  // Function to cancel parsing
+  const cancelParsing = () => {
+    setIsParsing(false);
+    setParseError('Parsing cancelled by user');
+    setAnalysisComplete(false);
+  };
+
   const clearParsedData = () => {
     setExtractedSkills([]);
     setParsedData(null);
@@ -1674,8 +1681,9 @@ function CompanyDashboardPage() {
                   type="button"
                   variant="outline" 
                   onClick={() => setActiveView('jobs')}
-                  className="flex-1 border-gray-300 hover:bg-gray-50"
+                  className="flex-1 border-gray-300 hover:bg-gray-50 flex items-center gap-2"
                 >
+                  <X className="h-4 w-4" />
                   Cancel
                 </Button>
                 <Button 
@@ -1709,11 +1717,18 @@ function CompanyDashboardPage() {
     return (
       <Drawer open={isEditJobOpen} onOpenChange={setIsEditJobOpen}>
         <DrawerContent className="max-h-[90vh] flex flex-col">
-          <DrawerHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
-            <DrawerTitle className="text-2xl font-bold">Edit Job Posting</DrawerTitle>
-            <DrawerDescription className="text-lg">
-              Update the job posting details
-            </DrawerDescription>
+          <DrawerHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b flex items-center justify-between">
+            <div>
+              <DrawerTitle className="text-2xl font-bold">Edit Job Posting</DrawerTitle>
+              <DrawerDescription className="text-lg">
+                Update the job posting details
+              </DrawerDescription>
+            </div>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </DrawerClose>
           </DrawerHeader>
           
           <div className="flex-1 overflow-y-auto">
@@ -1844,8 +1859,9 @@ function CompanyDashboardPage() {
               <Button 
                 variant="outline"
                 onClick={() => setIsEditJobOpen(false)}
-                className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50"
+                className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50 flex items-center gap-2"
               >
+                <X className="h-4 w-4" />
                 Cancel
               </Button>
             </div>
@@ -1907,10 +1923,10 @@ function CompanyDashboardPage() {
               <Button 
                 variant="outline" 
                 onClick={handleLogout}
-                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-2"
                 size="sm"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4" />
                 Logout
               </Button>
             </div>
@@ -1965,8 +1981,9 @@ function CompanyDashboardPage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={markAllAsRead}
-                                    className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 flex items-center gap-1"
                                   >
+                                    <CheckCircle className="h-3 w-3" />
                                     Mark all as read
                                   </Button>
                                 )}
@@ -2032,14 +2049,28 @@ function CompanyDashboardPage() {
                           </div>
                           
                           <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowNotifications(false)}
-                              className="w-full text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                            >
-                              Close
-                            </Button>
+                            <div className="flex items-center justify-between">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowNotifications(false)}
+                                className="text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 flex items-center gap-1"
+                              >
+                                <X className="h-4 w-4" />
+                                Close
+                              </Button>
+                              {notifications.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setNotifications([])}
+                                  className="text-sm text-red-600 hover:text-red-800 hover:bg-red-50 flex items-center gap-1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Clear All
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2072,11 +2103,18 @@ function CompanyDashboardPage() {
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerContent>
             <div className="mx-auto w-full max-w-4xl">
-              <DrawerHeader>
-                <DrawerTitle>Applicant Profile</DrawerTitle>
-                <DrawerDescription>
-                  Detailed view of {selectedApplicant?.name}'s application
-                </DrawerDescription>
+              <DrawerHeader className="flex items-center justify-between">
+                <div>
+                  <DrawerTitle>Applicant Profile</DrawerTitle>
+                  <DrawerDescription>
+                    Detailed view of {selectedApplicant?.name}'s application
+                  </DrawerDescription>
+                </div>
+                <DrawerClose asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DrawerClose>
               </DrawerHeader>
               <div className="p-6">
                 {selectedApplicant && (
@@ -2167,7 +2205,7 @@ function CompanyDashboardPage() {
                     )}
 
                     {isParsing && !parseError && (
-                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg relative">
                         <div className="flex items-center gap-3">
                           <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                           <div className="flex-1">
@@ -2177,6 +2215,16 @@ function CompanyDashboardPage() {
                             </p>
                           </div>
                         </div>
+                        {/* Close button for parsing */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={cancelParsing}
+                          className="absolute top-3 right-3 h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          title="Cancel parsing"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
 
@@ -2327,7 +2375,8 @@ function CompanyDashboardPage() {
                   </Button>
                 </div>
                 <DrawerClose asChild>
-                  <Button variant="outline" className="w-full border-gray-300 hover:bg-gray-50">
+                  <Button variant="outline" className="w-full border-gray-300 hover:bg-gray-50 flex items-center gap-2">
+                    <X className="h-4 w-4" />
                     Close
                   </Button>
                 </DrawerClose>

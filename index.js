@@ -493,18 +493,27 @@ app.get("/companies", async(req, res) => {
 })
 
 //jobPosting for Jobseeker side
-app.get("/jobs", async(req, res) => {
+app.get("/jobs", authenticateToken, async(req, res) => {
+  const currentUser = req.user.id
+
   try{
     const jobPosting = await JobPostings.findAll(
       {
         where:{
           reviewed: true
         },
-        include:{
+        include:[{
           model:Companies,
           as:"company",
           attributes:['name', "industry"]
-        }
+        },{
+          model: Applicants,
+          as: "applicants",
+          required: false,
+          where:{
+            userID: currentUser
+          }
+        }]
       })
     console.log(jobPosting)
     res.status(200).json({message: "OK", jobPosting})
