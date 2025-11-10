@@ -1,7 +1,7 @@
 {
   "development": {
     "username": "postgres",
-    "password": "password123",
+    "password": "123456",
     "database": "una_sa_trabaho_app",
     "host": "localhost",
     "dialect": "postgres"
