@@ -112,11 +112,9 @@ function JobsPage() {
     // No resume popup state
     const [showNoResumePopup, setShowNoResumePopup] = useState(false);
 
-    // Applied jobs tracking state
+    // Applied jobs tracking state - FIXED: Removed duplicate declaration
     const [appliedJobIds, setAppliedJobIds] = useState(new Set());
     const [isLoadingAppliedJobs, setIsLoadingAppliedJobs] = useState(false);
-    // Applied jobs state - NEW: Track which jobs user has applied to
-    const [appliedJobIds, setAppliedJobIds] = useState(new Set());
 
     // Dynamic options from backend data
     const [jobTypeOptions, setJobTypeOptions] = useState([]);
@@ -1165,7 +1163,11 @@ function JobsPage() {
 
                         {/* Scrollable Content Area */}
                         <div className="flex-1 overflow-hidden">
-                            <div className="h-full overflow-y-auto px-6 py-4">
+                            <div 
+                                ref={scrollContainerRef}
+                                onScroll={handleScroll}
+                                className="h-full overflow-y-auto px-6 py-4"
+                            >
                                 {selectedJob && (
                                     <div className="space-y-6 pb-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1300,35 +1302,36 @@ function JobsPage() {
                                             </div>
                                         )
                                     ) : (
-                                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                                        {/* NEW: Show Applied button if already applied, otherwise Show Apply Now */}
-                                        {isJobApplied(selectedJob.id) ? (
-                                            <Button 
-                                                className="flex-1 h-14 text-lg bg-green-600 hover:bg-green-700 text-white shadow-md cursor-not-allowed"
-                                                disabled
-                                            >
-                                                <Check className="h-5 w-5 mr-2" />
-                                                Applied
+                                        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                                            {/* NEW: Show Applied button if already applied, otherwise Show Apply Now */}
+                                            {isJobApplied(selectedJob.id) ? (
+                                                <Button 
+                                                    className="flex-1 h-14 text-lg bg-green-600 hover:bg-green-700 text-white shadow-md cursor-not-allowed"
+                                                    disabled
+                                                >
+                                                    <Check className="h-5 w-5 mr-2" />
+                                                    Applied
+                                                </Button>
+                                            ) : (
+                                                <Button 
+                                                    className="flex-1 h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                                                    onClick={handleApplyNow} 
+                                                    disabled={!isUserLoggedIn()}
+                                                >
+                                                    Apply Now
+                                                    <ArrowRight className="h-5 w-5 ml-2" />
+                                                </Button>
+                                            )}
+                                            <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
+                                                <Heart className="h-5 w-5 mr-2" />
+                                                Save
                                             </Button>
-                                        ) : (
-                                            <Button 
-                                                className="flex-1 h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md"
-                                                onClick={handleApplyNow} 
-                                                disabled={!isUserLoggedIn()}
-                                            >
-                                                Apply Now
-                                                <ArrowRight className="h-5 w-5 ml-2" />
+                                            <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
+                                                <Share2 className="h-5 w-5 mr-2" />
+                                                Share
                                             </Button>
-                                        )}
-                                        <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
-                                            <Heart className="h-5 w-5 mr-2" />
-                                            Save
-                                        </Button>
-                                        <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
-                                            <Share2 className="h-5 w-5 mr-2" />
-                                            Share
-                                        </Button>
-                                    </div>
+                                        </div>
+                                    )}
                                     {!isUserLoggedIn() && !isJobApplied(selectedJob.id) && (
                                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                             <p className="text-yellow-800 text-center">

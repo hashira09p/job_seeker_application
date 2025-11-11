@@ -859,21 +859,12 @@ app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
 
 //Passing application for Jobseeker side
 app.post("/application-submit", authenticateToken, async (req, res) => {
-    const { fullName, email, phone, coverletter, jobPostingID } = req.body;
+    const { fullName, email, phone, coverLetter, jobPostingID } = req.body;
     const userID = req.user.id;
 
     console.log(jobPostingID);
 
-    const result = await Applicants.create({
-      name: fullName,
-      email: email,
-      coverLetter: coverLetter,
-      phone: phone,
-      userID: userID,
-      documentID: documentID,
-      JobPostingId: jobPostingID,
-      status: 'submitted' // Set default status
-    })
+    
     try {
         const document = await Documents.findOne({
             where: {
@@ -887,15 +878,16 @@ app.post("/application-submit", authenticateToken, async (req, res) => {
 
         const documentID = document.id;
 
-        const applicant = await Applicants.create({
-            name: fullName,
-            email: email,
-            coverletter: coverletter,
-            phone: phone,
-            userID: userID,
-            documentID: documentID,
-            JobPostingId: jobPostingID
-        });
+        const result = await Applicants.create({
+          name: fullName,
+          email: email,
+          coverLetter: coverLetter,
+          phone: phone,
+          userID: userID,
+          documentID: documentID,
+          JobPostingId: jobPostingID,
+          status: 'submitted' // Set default status
+        })
 
         const jobPostingwithCompany = await JobPostings.findOne({
             where: {
