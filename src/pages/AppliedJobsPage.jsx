@@ -15,6 +15,8 @@ import {
     Mail,
     User,
     RefreshCw,
+    Filter,
+    X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -50,6 +52,12 @@ function AppliedJobsPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [companyFilter, setCompanyFilter] = useState("all");
+    const [locationFilter, setLocationFilter] = useState("all");
+    const [jobTypeFilter, setJobTypeFilter] = useState("all");
+    const [dateFilter, setDateFilter] = useState("all");
+    const [salaryFilter, setSalaryFilter] = useState("all");
+    const [showFilters, setShowFilters] = useState(false);
     const [selectedApplication, setSelectedApplication] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [socket, setSocket] = useState(null);
@@ -58,14 +66,32 @@ function AppliedJobsPage() {
     const [recentlyUpdated, setRecentlyUpdated] = useState(new Set());
     const URL = "http://localhost:3000";
 
+    // Filter options
     const statusOptions = [
-        { value: "all", label: "All Applications" },
+        { value: "all", label: "All Status" },
         { value: "submitted", label: "Submitted" },
         { value: "under_review", label: "Under Review" },
         { value: "shortlisted", label: "Shortlisted" },
         { value: "accepted", label: "Accepted" },
         { value: "rejected", label: "Rejected" },
         { value: "hired", label: "Hired" },
+    ];
+
+    const dateOptions = [
+        { value: "all", label: "Any Time" },
+        { value: "today", label: "Today" },
+        { value: "week", label: "This Week" },
+        { value: "month", label: "This Month" },
+        { value: "3months", label: "Last 3 Months" },
+    ];
+
+    const salaryOptions = [
+        { value: "all", label: "Any Salary" },
+        { value: "0-20000", label: "Up to ₱20,000" },
+        { value: "20000-40000", label: "₱20,000 - ₱40,000" },
+        { value: "40000-60000", label: "₱40,000 - ₱60,000" },
+        { value: "60000-80000", label: "₱60,000 - ₱80,000" },
+        { value: "80000+", label: "₱80,000+" },
     ];
 
     // Helper function to get user ID from token
@@ -241,7 +267,7 @@ function AppliedJobsPage() {
 
     useEffect(() => {
         filterApplications();
-    }, [appliedJobs, searchQuery, statusFilter]);
+    }, [appliedJobs, searchQuery, statusFilter, companyFilter, locationFilter, jobTypeFilter, dateFilter, salaryFilter]);
 
     const loadAppliedJobs = async () => {
         try {
@@ -368,7 +394,101 @@ function AppliedJobsPage() {
             filtered = filtered.filter((application) => application.status === statusFilter);
         }
 
+        // Company filter
+        if (companyFilter !== "all") {
+            filtered = filtered.filter((application) => 
+                application.job.company?.name === companyFilter
+            );
+        }
+
+        // Location filter
+        if (locationFilter !== "all") {
+            filtered = filtered.filter((application) => 
+                application.job.location === locationFilter
+            );
+        }
+
+        // Job Type filter
+        if (jobTypeFilter !== "all") {
+            filtered = filtered.filter((application) => 
+                application.job.type === jobTypeFilter
+            );
+        }
+
+        // Date filter
+        if (dateFilter !== "all") {
+            const now = new Date();
+            filtered = filtered.filter((application) => {
+                const applicationDate = new Date(application.applicationDate);
+                
+                switch (dateFilter) {
+                    case "today":
+                        return applicationDate.toDateString() === now.toDateString();
+                    case "week":
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        return applicationDate >= weekAgo;
+                    case "month":
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        return applicationDate >= monthAgo;
+                    case "3months":
+                        const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        return applicationDate >= threeMonthsAgo;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        // Salary filter
+        if (salaryFilter !== "all") {
+            filtered = filtered.filter((application) => {
+                const salaryMin = application.job.salaryMin || 0;
+                const salaryMax = application.job.salaryMax || 0;
+                const avgSalary = (salaryMin + salaryMax) / 2;
+                
+                switch (salaryFilter) {
+                    case "0-20000":
+                        return avgSalary <= 20000;
+                    case "20000-40000":
+                        return avgSalary >= 20000 && avgSalary <= 40000;
+                    case "40000-60000":
+                        return avgSalary >= 40000 && avgSalary <= 60000;
+                    case "60000-80000":
+                        return avgSalary >= 60000 && avgSalary <= 80000;
+                    case "80000+":
+                        return avgSalary >= 80000;
+                    default:
+                        return true;
+                }
+            });
+        }
+
         setFilteredJobs(filtered);
+    };
+
+    // Get unique values for dynamic filters
+    const getUniqueCompanies = () => {
+        const companies = [...new Set(appliedJobs.map(app => app.job.company?.name).filter(Boolean))];
+        return [
+            { value: "all", label: "All Companies" },
+            ...companies.map(company => ({ value: company, label: company }))
+        ];
+    };
+
+    const getUniqueLocations = () => {
+        const locations = [...new Set(appliedJobs.map(app => app.job.location).filter(Boolean))];
+        return [
+            { value: "all", label: "All Locations" },
+            ...locations.map(location => ({ value: location, label: location }))
+        ];
+    };
+
+    const getUniqueJobTypes = () => {
+        const jobTypes = [...new Set(appliedJobs.map(app => app.job.type).filter(Boolean))];
+        return [
+            { value: "all", label: "All Job Types" },
+            ...jobTypes.map(type => ({ value: type, label: type }))
+        ];
     };
 
     const handleSearchChange = (value) => {
@@ -378,6 +498,27 @@ function AppliedJobsPage() {
     const handleViewDetails = (application) => {
         setSelectedApplication(application);
         setIsDrawerOpen(true);
+    };
+
+    const clearAllFilters = () => {
+        setSearchQuery("");
+        setStatusFilter("all");
+        setCompanyFilter("all");
+        setLocationFilter("all");
+        setJobTypeFilter("all");
+        setDateFilter("all");
+        setSalaryFilter("all");
+    };
+
+    const getActiveFilterCount = () => {
+        let count = 0;
+        if (statusFilter !== "all") count++;
+        if (companyFilter !== "all") count++;
+        if (locationFilter !== "all") count++;
+        if (jobTypeFilter !== "all") count++;
+        if (dateFilter !== "all") count++;
+        if (salaryFilter !== "all") count++;
+        return count;
     };
 
     const getStatusBadge = (status, applicationId) => {
@@ -590,15 +731,11 @@ function AppliedJobsPage() {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Recent Applications</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {appliedJobs.filter(app => 
-                                            new Date(app.applicationDate) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                                        ).length}
-                                    </p>
+                                    <p className="text-sm font-medium text-gray-600">Active Filters</p>
+                                    <p className="text-2xl font-bold text-gray-900">{getActiveFilterCount()}</p>
                                 </div>
                                 <div className="bg-green-100 p-3 rounded-full">
-                                    <Calendar className="h-6 w-6 text-green-600" />
+                                    <Filter className="h-6 w-6 text-green-600" />
                                 </div>
                             </div>
                         </CardContent>
@@ -613,13 +750,30 @@ function AppliedJobsPage() {
                                 <Search className="h-5 w-5 text-green-600" />
                                 Filter Applications
                             </div>
+                            <div className="flex items-center gap-2">
+                                {getActiveFilterCount() > 0 && (
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                        {getActiveFilterCount()} active
+                                    </Badge>
+                                )}
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Filter className="h-4 w-4" />
+                                    {showFilters ? 'Hide Filters' : 'Show Filters'}
+                                </Button>
+                            </div>
                         </CardTitle>
                         <CardDescription>
-                            {appliedJobs.length} total applications • Real-time updates enabled
+                            {appliedJobs.length} total applications • {filteredJobs.length} filtered • Real-time updates enabled
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
-                        <div className="flex flex-col lg:flex-row gap-4">
+                        {/* Main Search */}
+                        <div className="flex flex-col lg:flex-row gap-4 mb-4">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                                 <Input
@@ -640,6 +794,125 @@ function AppliedJobsPage() {
                                 />
                             </div>
                         </div>
+
+                        {/* Advanced Filters */}
+                        {showFilters && (
+                            <div className="border-t border-gray-200 pt-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="font-semibold text-gray-700">Advanced Filters</h4>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        onClick={clearAllFilters}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                        <X className="h-4 w-4 mr-1" />
+                                        Clear All
+                                    </Button>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {/* Company Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                                        <Combobox
+                                            options={getUniqueCompanies()}
+                                            value={companyFilter}
+                                            onValueChange={setCompanyFilter}
+                                            placeholder="All Companies"
+                                            className="h-10"
+                                        />
+                                    </div>
+
+                                    {/* Location Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                                        <Combobox
+                                            options={getUniqueLocations()}
+                                            value={locationFilter}
+                                            onValueChange={setLocationFilter}
+                                            placeholder="All Locations"
+                                            className="h-10"
+                                        />
+                                    </div>
+
+                                    {/* Job Type Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+                                        <Combobox
+                                            options={getUniqueJobTypes()}
+                                            value={jobTypeFilter}
+                                            onValueChange={setJobTypeFilter}
+                                            placeholder="All Job Types"
+                                            className="h-10"
+                                        />
+                                    </div>
+
+                                    {/* Date Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Application Date</label>
+                                        <Combobox
+                                            options={dateOptions}
+                                            value={dateFilter}
+                                            onValueChange={setDateFilter}
+                                            placeholder="Any Time"
+                                            className="h-10"
+                                        />
+                                    </div>
+
+                                    {/* Salary Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
+                                        <Combobox
+                                            options={salaryOptions}
+                                            value={salaryFilter}
+                                            onValueChange={setSalaryFilter}
+                                            placeholder="Any Salary"
+                                            className="h-10"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Active Filters Display */}
+                                {getActiveFilterCount() > 0 && (
+                                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                                        <p className="text-sm font-medium text-gray-700 mb-2">Active Filters:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {statusFilter !== "all" && (
+                                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                                    Status: {statusOptions.find(opt => opt.value === statusFilter)?.label}
+                                                </Badge>
+                                            )}
+                                            {companyFilter !== "all" && (
+                                                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                                    Company: {companyFilter}
+                                                </Badge>
+                                            )}
+                                            {locationFilter !== "all" && (
+                                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                                    Location: {locationFilter}
+                                                </Badge>
+                                            )}
+                                            {jobTypeFilter !== "all" && (
+                                                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                                                    Job Type: {jobTypeFilter}
+                                                </Badge>
+                                            )}
+                                            {dateFilter !== "all" && (
+                                                <Badge variant="secondary" className="bg-red-100 text-red-800">
+                                                    Date: {dateOptions.find(opt => opt.value === dateFilter)?.label}
+                                                </Badge>
+                                            )}
+                                            {salaryFilter !== "all" && (
+                                                <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
+                                                    Salary: {salaryOptions.find(opt => opt.value === salaryFilter)?.label}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -687,6 +960,15 @@ function AppliedJobsPage() {
                                                 <Briefcase className="h-5 w-5 mr-2" />
                                                 Browse Available Jobs
                                             </Link>
+                                        </Button>
+                                    )}
+                                    {appliedJobs.length > 0 && (
+                                        <Button 
+                                            onClick={clearAllFilters}
+                                            variant="outline" 
+                                            className="h-12 px-6 text-lg border-gray-300"
+                                        >
+                                            Clear All Filters
                                         </Button>
                                     )}
                                 </div>
