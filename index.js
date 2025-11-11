@@ -392,6 +392,19 @@ app.get("/applied-jobs", authenticateToken, async (req, res) => {
             order: [['createdAt', 'DESC']]
         }); 
         
+        console.log("✅ Found applications:", applications.length); 
+        
+        // Log first application structure for debugging
+        if (applications.length > 0) {
+            console.log("📦 First application structure:", {
+                id: applications[0].id,
+                userID: applications[0].userID,
+                status: applications[0].status,
+                JobPostingId: applications[0].JobPostingId,
+                hasJobPosting: !!applications[0].JobPosting,
+                allKeys: Object.keys(applications[0].dataValues || applications[0])
+            });
+        }
         console.log(applications.length); 
         console.log(JSON.stringify(applications, null, 2)); 
         
@@ -400,6 +413,8 @@ app.get("/applied-jobs", authenticateToken, async (req, res) => {
             userApplications: applications 
         }); 
     } catch (err) { 
+        console.log("❌ Error fetching applications:", err.message);
+        console.error("Full error:", err);
         console.log(err.message); 
         res.status(400).json({ message: err.message });
     }
@@ -849,6 +864,16 @@ app.post("/application-submit", authenticateToken, async (req, res) => {
 
     console.log(jobPostingID);
 
+    const result = await Applicants.create({
+      name: fullName,
+      email: email,
+      coverLetter: coverLetter,
+      phone: phone,
+      userID: userID,
+      documentID: documentID,
+      JobPostingId: jobPostingID,
+      status: 'submitted' // Set default status
+    })
     try {
         const document = await Documents.findOne({
             where: {
