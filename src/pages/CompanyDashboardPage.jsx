@@ -692,11 +692,6 @@ function CompanyDashboardPage() {
   // Column definitions for job postings table - FIXED APPLICANT COUNT
   const jobPostingsColumns = [
     {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ row }) => <div className="font-medium">#{row.getValue("id")}</div>,
-    },
-    {
       accessorKey: "title",
       header: "Title",
     },
@@ -2102,7 +2097,7 @@ function CompanyDashboardPage() {
 
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerContent>
-            <div className="mx-auto w-full max-w-4xl">
+            <div className="mx-auto w-full max-w-5xl">
               <DrawerHeader className="flex items-center justify-between">
                 <div>
                   <DrawerTitle>Applicant Profile</DrawerTitle>
@@ -2235,54 +2230,82 @@ function CompanyDashboardPage() {
                           AI Parsed Resume Data
                         </h4>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          {parsedData.totalYearsExperience > 0 && (
-                            <div className="p-2 bg-gray-50 rounded">
-                              <p className="text-xs text-muted-foreground">Experience</p>
-                              <p className="font-medium">{parsedData.totalYearsExperience} years</p>
+                        <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            {parsedData.totalYearsExperience > 0 && (
+                              <div className="p-2 bg-white rounded border">
+                                <p className="text-xs text-muted-foreground">Experience</p>
+                                <p className="font-medium">{parsedData.totalYearsExperience} years</p>
+                              </div>
+                            )}
+                            {parsedData.location && (
+                              <div className="p-2 bg-white rounded border">
+                                <p className="text-xs text-muted-foreground">Location</p>
+                                <p className="font-medium text-sm">{parsedData.location}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {parsedData.summary && (
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">Professional Summary:</p>
+                              <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                                <p className="text-sm text-muted-foreground leading-relaxed break-words whitespace-pre-wrap">
+                                  {parsedData.summary}
+                                </p>
+                              </div>
                             </div>
                           )}
-                          {parsedData.location && (
-                            <div className="p-2 bg-gray-50 rounded">
-                              <p className="text-xs text-muted-foreground">Location</p>
-                              <p className="font-medium text-sm">{parsedData.location}</p>
+
+                          {parsedData.workExperience && parsedData.workExperience.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Work Experience:</p>
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {parsedData.workExperience.map((job, index) => (
+                                  <div key={index} className="p-2 bg-white rounded border text-sm">
+                                    <p className="font-medium">{job.jobTitle}</p>
+                                    <p className="text-xs text-muted-foreground">{job.organization}</p>
+                                    {job.duration && (
+                                      <p className="text-xs text-muted-foreground">{job.duration}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedData.education && parsedData.education.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Education:</p>
+                              <div className="space-y-2">
+                                {parsedData.education.map((edu, index) => (
+                                  <div key={index} className="p-2 bg-white rounded border text-sm">
+                                    <p className="font-medium">{edu.degree}</p>
+                                    {edu.institution && (
+                                      <p className="text-xs text-muted-foreground">{edu.institution}</p>
+                                    )}
+                                    {edu.year && (
+                                      <p className="text-xs text-muted-foreground">{edu.year}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedData.skills && parsedData.skills.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Skills:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedData.skills.map((skill, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {typeof skill === 'string' ? skill : skill.name}
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
-
-                        {parsedData.summary && (
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">Professional Summary:</p>
-                            <p className="text-sm text-muted-foreground">{parsedData.summary}</p>
-                          </div>
-                        )}
-
-                        {parsedData.workExperience && parsedData.workExperience.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Work Experience:</p>
-                            {parsedData.workExperience.slice(0, 2).map((job, index) => (
-                              <div key={index} className="p-2 bg-gray-50 rounded text-sm">
-                                <p className="font-medium">{job.jobTitle}</p>
-                                <p className="text-xs text-muted-foreground">{job.organization}</p>
-                              </div>
-                            ))}
-                            {parsedData.workExperience.length > 2 && (
-                              <p className="text-xs text-muted-foreground">
-                                +{parsedData.workExperience.length - 2} more positions
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {parsedData.education && parsedData.education.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">Education:</p>
-                            <p className="text-sm text-muted-foreground">{parsedData.education[0].degree}</p>
-                            {parsedData.education[0].institution && (
-                              <p className="text-xs text-muted-foreground">{parsedData.education[0].institution}</p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     )}
 
