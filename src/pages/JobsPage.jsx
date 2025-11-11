@@ -27,6 +27,7 @@ import {
     File,
     User,
     MailIcon,
+    CheckCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -109,6 +110,10 @@ function JobsPage() {
     // No resume popup state
     const [showNoResumePopup, setShowNoResumePopup] = useState(false);
 
+    // Applied jobs tracking state
+    const [appliedJobIds, setAppliedJobIds] = useState(new Set());
+    const [isLoadingAppliedJobs, setIsLoadingAppliedJobs] = useState(false);
+
     // Dynamic options from backend data
     const [jobTypeOptions, setJobTypeOptions] = useState([]);
     const [industryOptions, setIndustryOptions] = useState([]);
@@ -178,6 +183,12 @@ function JobsPage() {
     }, []);
 
     useEffect(() => {
+        if (isUserLoggedIn()) {
+            loadAppliedJobIds();
+        }
+    }, []);
+
+    useEffect(() => {
         // Update pagination when filtered jobs change
         const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
         setTotalPages(totalPages);
@@ -207,6 +218,34 @@ function JobsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Function to fetch applied job IDs
+    const loadAppliedJobIds = async () => {
+        try {
+            setIsLoadingAppliedJobs(true);
+            const token = localStorage.getItem("token");
+            
+            const response = await axios.get(`${URL}/applied-jobs`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.userApplications) {
+                const appliedIds = new Set(
+                    response.data.userApplications.map(app => app.JobPosting?.id || app.jobId)
+                );
+                setAppliedJobIds(appliedIds);
+            }
+        } catch (error) {
+            console.error("Error loading applied jobs:", error);
+        } finally {
+            setIsLoadingAppliedJobs(false);
+        }
+    };
+
+    // Check if user has already applied to a job
+    const hasApplied = (jobId) => {
+        return appliedJobIds.has(jobId);
     };
 
     // Fetch user's resumes when apply dialog opens
@@ -524,6 +563,9 @@ function JobsPage() {
                     Authorization: `Bearer ${token}`,
                 },
             });
+
+            // Add job ID to applied jobs set
+            setAppliedJobIds(prev => new Set([...prev, selectedJob.id]));
 
             // Reset form
             setApplicationForm({
@@ -887,13 +929,37 @@ function JobsPage() {
                                     {displayedJobs.map((job) => (
                                         <Card 
                                             key={job.id} 
-                                            className="hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-200 hover:border-blue-300"
+                                            className={`hover:shadow-lg transition-all duration-300 cursor-pointer border ${
+                                                isUserLoggedIn() && hasApplied(job.id)
+                                                    ? 'border-green-300 bg-green-50/30 hover:border-green-400'
+                                                    : 'border-gray-200 hover:border-blue-300'
+                                            }`}
                                             onClick={() => handleViewDetails(job)}
                                         >
                                             <CardContent className="p-6">
                                                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
                                                     <div className="flex-1">
-                                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{job.title}</h3>
+                                                        <div className="flex items-start gap-3 mb-2">
+                                                            <h3 className="text-xl font-bold text-gray-900 flex-1">{job.title}</h3>
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge 
+                                                                    variant={job.status === "active" ? "default" : "secondary"} 
+                                                                    className={`${
+                                                                        job.status === "active" 
+                                                                            ? "bg-green-100 text-green-800 border-green-200" 
+                                                                            : "bg-gray-100 text-gray-800 border-gray-200"
+                                                                    }`}
+                                                                >
+                                                                    {job.status}
+                                                                </Badge>
+                                                                {isUserLoggedIn() && hasApplied(job.id) && (
+                                                                    <Badge className="bg-green-100 text-green-800 border-green-200 font-semibold">
+                                                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                                                        Applied
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
                                                             <div className="flex items-center gap-2">
                                                                 <Building2 className="h-4 w-4" />
@@ -914,16 +980,6 @@ function JobsPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <Badge 
-                                                        variant={job.status === "active" ? "default" : "secondary"} 
-                                                        className={`ml-2 ${
-                                                            job.status === "active" 
-                                                                ? "bg-green-100 text-green-800 border-green-200" 
-                                                                : "bg-gray-100 text-gray-800 border-gray-200"
-                                                        }`}
-                                                    >
-                                                        {job.status}
-                                                    </Badge>
                                                 </div>
 
                                                 <p className="text-gray-700 mb-4 line-clamp-2 leading-relaxed">{job.description}</p>
@@ -991,10 +1047,24 @@ function JobsPage() {
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <DrawerContent style={{ height: `${drawerHeight}vh` }} className="border-0">
                     <div className="mx-auto w-full max-w-4xl h-full flex flex-col bg-white rounded-t-2xl overflow-hidden">
-                        <DrawerHeader className="flex-shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b p-6">
+                        <DrawerHeader className={`flex-shrink-0 border-b p-6 ${
+                            isUserLoggedIn() && selectedJob && hasApplied(selectedJob.id)
+                                ? 'bg-gradient-to-r from-green-50 to-emerald-50'
+                                : 'bg-gradient-to-r from-blue-50 to-indigo-50'
+                        }`}>
                             <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                    <DrawerTitle className="text-2xl font-bold text-gray-900 mb-2">{selectedJob?.title}</DrawerTitle>
+                                    <div className="flex items-start gap-3 mb-2">
+                                        <DrawerTitle className="text-2xl font-bold text-gray-900 flex-1">
+                                            {selectedJob?.title}
+                                        </DrawerTitle>
+                                        {isUserLoggedIn() && selectedJob && hasApplied(selectedJob.id) && (
+                                            <Badge className="bg-green-100 text-green-800 border-green-300 font-semibold px-3 py-1">
+                                                <CheckCircle className="h-4 w-4 mr-1" />
+                                                Applied
+                                            </Badge>
+                                        )}
+                                    </div>
                                     <DrawerDescription className="text-gray-600">
                                         <div className="flex flex-wrap gap-4 mt-2">
                                             <div className="flex items-center gap-2">
@@ -1102,25 +1172,64 @@ function JobsPage() {
                         <div className="flex-shrink-0 border-t bg-white p-6 shadow-lg">
                             {selectedJob && (
                                 <>
-                                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                                        <Button 
-                                            className="flex-1 h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md"
-                                            onClick={handleApplyNow} 
-                                            disabled={!isUserLoggedIn()}
-                                        >
-                                            Apply Now
-                                            <ArrowRight className="h-5 w-5 ml-2" />
-                                        </Button>
-                                        <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
-                                            <Heart className="h-5 w-5 mr-2" />
-                                            Save
-                                        </Button>
-                                        <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
-                                            <Share2 className="h-5 w-5 mr-2" />
-                                            Share
-                                        </Button>
-                                    </div>
-                                    {!isUserLoggedIn() && (
+                                    {isUserLoggedIn() ? (
+                                        hasApplied(selectedJob.id) ? (
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg shadow-sm">
+                                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                                                    <div className="text-center">
+                                                        <p className="text-green-900 font-semibold text-lg">
+                                                            Application Submitted Successfully!
+                                                        </p>
+                                                        <p className="text-green-700 text-sm mt-1">
+                                                            You have already applied to this position
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row gap-3">
+                                                    <Button 
+                                                        size="lg" 
+                                                        className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white shadow-md"
+                                                        asChild
+                                                    >
+                                                        <Link to="/applied-jobs">
+                                                            <FileText className="h-5 w-5 mr-2" />
+                                                            View Application Status
+                                                        </Link>
+                                                    </Button>
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="lg" 
+                                                        className="h-12 border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                        asChild
+                                                    >
+                                                        <Link to="/jobs">
+                                                            <Briefcase className="h-5 w-5 mr-2" />
+                                                            Browse More Jobs
+                                                        </Link>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col sm:flex-row gap-4">
+                                                <Button 
+                                                    className="flex-1 h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                                                    onClick={handleApplyNow}
+                                                >
+                                                    Apply Now
+                                                    <ArrowRight className="h-5 w-5 ml-2" />
+                                                </Button>
+                                                <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
+                                                    <Heart className="h-5 w-5 mr-2" />
+                                                    Save
+                                                </Button>
+                                                <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
+                                                    <Share2 className="h-5 w-5 mr-2" />
+                                                    Share
+                                                </Button>
+                                            </div>
+                                        )
+                                    ) : (
                                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                             <p className="text-yellow-800 text-center">
                                                 🔒 You need to <Link to="/login" className="underline font-medium text-blue-600">log in</Link> or{" "}

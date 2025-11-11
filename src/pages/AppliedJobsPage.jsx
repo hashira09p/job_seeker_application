@@ -209,10 +209,11 @@ function AppliedJobsPage() {
                 // In your loadAppliedJobs function, update the transformation:
                 const transformedApplications = response.data.userApplications.map((app) => {
                     console.log("Raw application data:", app);
+                    console.log("Application ID from backend:", app.id);
                     
                     return {
-                        id: app.id,
-                        applicationId: app.applicationId,
+                        id: app.id, // This is the Applicants table ID - the one we need to delete
+                        applicationId: app.id, // Same as id, for compatibility
                         job: {
                             id: app.JobPosting?.id || app.jobId,
                             title: app.JobPosting?.title || "Job Title",
@@ -555,24 +556,26 @@ function AppliedJobsPage() {
                     ) : filteredJobs.length === 0 ? (
                         <Card className="border-0 shadow-md text-center py-12">
                             <CardContent>
-                                <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                                    {appliedJobs.length === 0 ? "No applications yet" : "No matching applications found"}
-                                </h3>
-                                <p className="text-gray-600 mb-6">
-                                    {appliedJobs.length === 0 
-                                        ? "Start applying to jobs to see them here!" 
-                                        : "Try adjusting your search criteria to see more results."
-                                    }
-                                </p>
-                                {appliedJobs.length === 0 && (
-                                    <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
-                                        <Link to="/jobs">
-                                            <Briefcase className="h-4 w-4 mr-2" />
-                                            Browse Jobs
-                                        </Link>
-                                    </Button>
-                                )}
+                                <div className="max-w-md mx-auto">
+                                    <FileText className="h-20 w-20 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-2xl font-semibold text-gray-700 mb-3">
+                                        {appliedJobs.length === 0 ? "No Applications Yet" : "No Matching Applications"}
+                                    </h3>
+                                    <p className="text-gray-600 mb-6 text-lg">
+                                        {appliedJobs.length === 0 
+                                            ? "You haven't applied to any jobs yet. Start browsing available positions and submit your applications!" 
+                                            : "No applications match your current filters. Try adjusting your search criteria."
+                                        }
+                                    </p>
+                                    {appliedJobs.length === 0 && (
+                                        <Button asChild className="bg-green-600 hover:bg-green-700 text-white h-12 px-6 text-lg shadow-md">
+                                            <Link to="/jobs">
+                                                <Briefcase className="h-5 w-5 mr-2" />
+                                                Browse Available Jobs
+                                            </Link>
+                                        </Button>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     ) : (
@@ -580,7 +583,7 @@ function AppliedJobsPage() {
                             {filteredJobs.map((application) => (
                                 <Card 
                                     key={application.id} 
-                                    className="hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-200 hover:border-green-300"
+                                    className="hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-200 hover:border-green-300 group"
                                     onClick={() => handleViewDetails(application)}
                                 >
                                     <CardContent className="p-6">
@@ -614,15 +617,15 @@ function AppliedJobsPage() {
                                                 <span>{formatSalary(application.job)}</span>
                                             </div>
                                             
-                                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                                                <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full flex items-center gap-2">
                                                     <Calendar className="h-4 w-4" />
                                                     <span>Applied {formatDate(application.applicationDate)}</span>
                                                 </div>
                                                 <Button 
                                                     variant="outline" 
                                                     size="sm" 
-                                                    className="flex items-center gap-2"
+                                                    className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleViewDetails(application);
@@ -787,25 +790,14 @@ function AppliedJobsPage() {
 
                         {/* Fixed Button Section */}
                         <div className="flex-shrink-0 border-t bg-white p-6 shadow-lg">
-                            <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex flex-col sm:flex-row gap-3">
                                 <Button 
-                                    className="flex-1 h-14 text-lg bg-green-600 hover:bg-green-700 text-white shadow-md"
+                                    className="flex-1 h-12 text-lg bg-green-600 hover:bg-green-700 text-white shadow-md"
                                     asChild
                                 >
                                     <Link to="/jobs">
                                         <Briefcase className="h-5 w-5 mr-2" />
                                         Browse More Jobs
-                                    </Link>
-                                </Button>
-                                <Button 
-                                    variant="outline" 
-                                    size="lg" 
-                                    className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50"
-                                    asChild
-                                >
-                                    <Link to="/profile">
-                                        <User className="h-5 w-5 mr-2" />
-                                        Update Profile
                                     </Link>
                                 </Button>
                             </div>

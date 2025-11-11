@@ -390,14 +390,26 @@ app.get("/applied-jobs", authenticateToken, async (req, res) => {
         }); 
         
         console.log("✅ Found applications:", applications.length); 
-        console.log("📦 Applications data:", JSON.stringify(applications, null, 2)); 
+        
+        // Log first application structure for debugging
+        if (applications.length > 0) {
+            console.log("📦 First application structure:", {
+                id: applications[0].id,
+                userID: applications[0].userID,
+                status: applications[0].status,
+                JobPostingId: applications[0].JobPostingId,
+                hasJobPosting: !!applications[0].JobPosting,
+                allKeys: Object.keys(applications[0].dataValues || applications[0])
+            });
+        }
         
         res.status(200).json({ 
             message: "success", 
             userApplications: applications 
         }); 
     } catch (err) { 
-        console.log("❌ Error fetching applications:", err.message); 
+        console.log("❌ Error fetching applications:", err.message);
+        console.error("Full error:", err);
         res.status(400).json({ message: err.message });
     }
 });
@@ -689,7 +701,8 @@ app.post("/application-submit", authenticateToken, async(req, res) => {
       phone: phone,
       userID: userID,
       documentID: documentID,
-      JobPostingId: jobPostingID
+      JobPostingId: jobPostingID,
+      status: 'submitted' // Set default status
     })
 
     console.log(result)
