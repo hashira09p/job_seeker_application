@@ -181,9 +181,17 @@ function AdminPage() {
       const link = document.createElement('a')
       link.href = url
       
-      const filename = response.headers['content-disposition'] 
+      // Get filename from content-disposition header or generate one
+      let filename = response.headers['content-disposition'] 
         ? response.headers['content-disposition'].split('filename=')[1]?.replace(/"/g, '')
-        : `${employerName}_document.pdf`
+        : `${employerName}_document`
+      
+      // If no extension in filename, try to detect from content type or add default
+      if (!filename.includes('.')) {
+        const contentType = response.headers['content-type']
+        const extension = getFileExtensionFromContentType(contentType)
+        filename = `${filename}${extension}`
+      }
       
       link.setAttribute('download', filename)
       document.body.appendChild(link)
@@ -195,6 +203,39 @@ function AdminPage() {
       console.log('Error downloading document:', err.message)
       alert('Error downloading document. Please try again.')
     }
+  }
+
+  // Helper function to determine file extension from content type
+  const getFileExtensionFromContentType = (contentType) => {
+    const extensionMap = {
+      // Documents
+      'application/pdf': '.pdf',
+      'application/msword': '.doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      'application/vnd.ms-excel': '.xls',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+      'application/vnd.ms-powerpoint': '.ppt',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+      'text/plain': '.txt',
+      'text/csv': '.csv',
+      
+      // Images
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'image/svg+xml': '.svg',
+      
+      // Archives
+      'application/zip': '.zip',
+      'application/x-rar-compressed': '.rar',
+      
+      // Default fallback
+      'application/octet-stream': '.bin'
+    }
+    
+    return extensionMap[contentType?.toLowerCase()] || '.bin'
   }
 
   const sidebarItems = [
