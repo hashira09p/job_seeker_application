@@ -15,8 +15,10 @@ import { FileEdit, Trophy } from 'lucide-react';
 import multer from "multer"
 import fs from "fs"
 import path from 'path';
+import affindaService from './services/affindaService.js';
 import {Server} from "socket.io"
 import http from "http";
+
 
 dotenv.config()
 
@@ -236,7 +238,6 @@ app.post("/submit-login", async(req, res) => {
 //Employer
 //Company Page for Employer
 app.get("/companyDashboard", authenticateToken, async (req, res) => {
-  console.log(req.user.id, "hello")
   try {
     const user = await Users.findOne({
       where: { id: req.user.id }
@@ -261,9 +262,11 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
       include: [{
         model: Applicants,
         as: "applicants",
-        attributes: ["id", "status", "createdAt"]
+        attributes: ["id", "status", "createdAt", "JobPostingId"]
       }]
     });
+
+    console.log(jobPostings)
 
     const formattedJobPostings = jobPostings.map(job => ({
       id: job.id,
@@ -276,7 +279,7 @@ app.get("/companyDashboard", authenticateToken, async (req, res) => {
       salaryMax: job.salaryMax,
       createdAt: job.createdAt,
       reviewed: job.reviewed,
-      applicants: job.applicants ? job.applicants : []
+      applicants: job.applicants
     }));
 
     res.status(200).json({
@@ -370,7 +373,7 @@ app.patch("/applicants/:id", authenticateToken, async(req,res) => {
     }
 })
 
-// Corrected backend route - /app/applied-jobs
+// /app/applied-jobs
 app.get("/applied-jobs", authenticateToken, async (req, res) => { 
     try { 
         const currentUser = req.user.id; 
@@ -402,6 +405,8 @@ app.get("/applied-jobs", authenticateToken, async (req, res) => {
                 allKeys: Object.keys(applications[0].dataValues || applications[0])
             });
         }
+        console.log(applications.length); 
+        console.log(JSON.stringify(applications, null, 2)); 
         
         res.status(200).json({ 
             message: "success", 
@@ -410,6 +415,7 @@ app.get("/applied-jobs", authenticateToken, async (req, res) => {
     } catch (err) { 
         console.log("❌ Error fetching applications:", err.message);
         console.error("Full error:", err);
+        console.log(err.message); 
         res.status(400).json({ message: err.message });
     }
 });
@@ -502,18 +508,27 @@ app.get("/companies", async(req, res) => {
 })
 
 //jobPosting for Jobseeker side
-app.get("/jobs", async(req, res) => {
+app.get("/jobs", authenticateToken, async(req, res) => {
+  const currentUser = req.user.id
+
   try{
     const jobPosting = await JobPostings.findAll(
       {
         where:{
           reviewed: true
         },
-        include:{
+        include:[{
           model:Companies,
           as:"company",
           attributes:['name', "industry"]
-        }
+        },{
+          model: Applicants,
+          as: "applicants",
+          required: false,
+          where:{
+            userID: currentUser
+          }
+        }]
       })
     console.log(jobPosting)
     res.status(200).json({message: "OK", jobPosting})
@@ -534,13 +549,84 @@ app.post("/uploadResume", authenticateToken, upload.single("document"), async(re
       fileDir: req.file.path
     })
     
-    res.status(200).json({message: "Saved Success", document: result})
+    console.log('📄 Document saved to database:', result.id);
+    
+    // Parse resume with Affinda API in the background (non-blocking)
+    // This allows the response to be sent immediately while parsing happens asynchronously
+    parseResumeAsync(result.id, req.file.path, req.user.id);
+    
+    res.status(200).json({
+      message: "Document uploaded successfully. AI parsing in progress...",
+      document: result,
+      parsing: true
+    })
   }catch(err){
     console.log(err.message)
     res.status(400).json({message: "Delete first your existing file"})
     return
   }
 })
+
+/**
+ * Async function to parse resume without blocking response
+ * This runs in the background after the upload completes
+ * @param {number} documentId - The document ID in database
+ * @param {string} filePath - Path to the uploaded file
+ * @param {number} userId - User ID who uploaded the document
+ */ 
+async function parseResumeAsync(documentId, filePath, userId) {
+  try {
+    console.log(`🤖 Starting AI parsing for document ${documentId}`);
+    
+    // Parse resume with Affinda
+    const parsedData = await affindaService.parseResume(filePath);
+    
+    console.log('✅ Resume parsed successfully:', parsedData.name);
+    
+    // Store parsed data in database
+    await Documents.update({
+      parsedData: JSON.stringify(parsedData),
+      isParsed: true,
+      parseFailed: false,
+      parseError: null
+    }, {
+      where: { id: documentId }
+    });
+    
+    // Optionally update user profile with extracted information
+    // Only update if fields are empty in user profile
+    const user = await Users.findByPk(userId);
+    const updates = {};
+    
+    if (!user.fullName && parsedData.name) {
+      updates.fullName = parsedData.name;
+    }
+    if (!user.email && parsedData.email) {
+      updates.email = parsedData.email;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await Users.update(updates, {
+        where: { id: userId }
+      });
+      console.log(`👤 Updated user profile with parsed data`);
+    }
+    
+    console.log(`✅ AI parsing completed for document ${documentId}`);
+    
+  } catch (error) {
+    console.error(`❌ Error parsing resume ${documentId}:`, error.message);
+    
+    // Mark parsing as failed
+    await Documents.update({
+      parseFailed: true,
+      parseError: error.message,
+      isParsed: false
+    }, {
+      where: { id: documentId }
+    });
+  }
+}
 
 //getting the resume from lcoalStorage.(Jobseeker side)
 app.get("/getResume", authenticateToken, async(req, res) => {
@@ -557,6 +643,99 @@ app.get("/getResume", authenticateToken, async(req, res) => {
     console.log(err.message)
   }
 })
+
+// Trigger parsing for an existing document (Employer side - parse applicant's resume)
+app.post("/parseResume/:documentId", authenticateToken, async(req, res) => {
+  const documentId = req.params.documentId;
+  
+  try {
+    // Find the document (no userID check since employer is parsing applicant's resume)
+    const document = await Documents.findOne({
+      where: {
+        id: documentId
+      }
+    });
+    
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Check if already parsed
+    if (document.isParsed) {
+      const parsedData = document.parsedData ? JSON.parse(document.parsedData) : null;
+      return res.status(200).json({
+        message: "Already parsed",
+        document: {
+          id: document.id,
+          fileName: document.fileName,
+          isParsed: true,
+          parseFailed: false
+        },
+        parsedData: parsedData
+      });
+    }
+
+    // Check if file exists
+    const filePath = path.join(process.cwd(), document.fileDir);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Resume file not found on server" });
+    }
+
+    // Trigger background parsing
+    console.log(`🤖 Employer triggered parsing for document ${documentId}`);
+    parseResumeAsync(documentId, filePath, document.userID);
+
+    res.status(200).json({
+      message: "Parsing started",
+      document: {
+        id: document.id,
+        fileName: document.fileName,
+        isParsed: false,
+        parseFailed: false
+      },
+      parsing: true
+    });
+
+  } catch(err) {
+    console.log(err.message);
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// New endpoint to get parsed resume data (Updated to allow employers to view applicant resumes)
+app.get("/getResumeData/:documentId", authenticateToken, async(req, res) => {
+  const documentId = req.params.documentId;
+  
+  try {
+    // Find document without userID restriction (allow employers to view applicant resumes)
+    const document = await Documents.findOne({
+      where: {
+        id: documentId
+      }
+    });
+    
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    
+    const parsedData = document.parsedData ? JSON.parse(document.parsedData) : null;
+    
+    res.status(200).json({
+      document: {
+        id: document.id,
+        fileName: document.fileName,
+        isParsed: document.isParsed || false,
+        parseFailed: document.parseFailed || false,
+        parseError: document.parseError
+      },
+      parsedData: parsedData
+    });
+    
+  } catch(err) {
+    console.log(err.message);
+    res.status(400).json({ message: err.message });
+  }
+});
 
 //Download Resume from localstorage and delete the file directory from database.(Jobseeker side)
 app.get("/downloadResume", authenticateToken, async(req, res) => {
@@ -679,20 +858,11 @@ app.delete("/deleteResume/:id", authenticateToken, async(req, res) => {
 })
 
 //Passing application for Jobseeker side
-app.post("/application-submit", authenticateToken, async(req, res) => {
-  const {fullName, email, phone, coverLetter, jobPostingID} = req.body
-  const userID = req.user.id
+app.post("/application-submit", authenticateToken, async (req, res) => {
+    const { fullName, email, phone, coverletter, jobPostingID } = req.body;
+    const userID = req.user.id;
 
-  console.log(jobPostingID)
-  
-  try{
-    const document = await Documents.findOne({
-      where:{
-      userID: req.user.id 
-      }
-    })
-
-    const documentID = document.id
+    console.log(jobPostingID);
 
     const result = await Applicants.create({
       name: fullName,
@@ -704,16 +874,57 @@ app.post("/application-submit", authenticateToken, async(req, res) => {
       JobPostingId: jobPostingID,
       status: 'submitted' // Set default status
     })
+    try {
+        const document = await Documents.findOne({
+            where: {
+                userID: req.user.id
+            }
+        });
 
-    console.log(result)
+        if (!document) {
+            return res.status(400).json({ message: 'Upload your resume first in upload page' });
+        }
 
-    res.status(200).json({message: "OK"})
-  }catch(err){
-    console.log(err.message)
-    res.status(400).json({message: "Upload your resume first in upload page"})
-  }
-})
+        const documentID = document.id;
 
+        const applicant = await Applicants.create({
+            name: fullName,
+            email: email,
+            coverletter: coverletter,
+            phone: phone,
+            userID: userID,
+            documentID: documentID,
+            JobPostingId: jobPostingID
+        });
+
+        const jobPostingwithCompany = await JobPostings.findOne({
+            where: {
+                id: jobPostingID
+            },
+            include: {
+                model: Companies,
+                as: "company",
+                attributes: ['id', 'name']
+            }
+        });
+
+        console.log(jobPostingwithCompany.company.name);
+
+        // Emit socket event to notify the company
+        io.emit("someoneSubmitApplication", {
+            jobTitle: jobPostingwithCompany.title,
+            company: jobPostingwithCompany.company.name,
+            applicantName: fullName,
+            jobId: jobPostingID,
+            companyId: jobPostingwithCompany.company.id
+        });
+
+        res.status(200).json({ message: 'Application submitted successfully' });
+    } catch (err) {
+        console.log(err.message);
+        res.status(400).json({ message: 'Upload your resume first in upload page' });
+    }
+});
 
 
 passport.use("google", new GoogleStrategy({

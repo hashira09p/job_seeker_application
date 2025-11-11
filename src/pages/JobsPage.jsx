@@ -28,6 +28,7 @@ import {
     User,
     MailIcon,
     CheckCircle,
+    Check,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -85,6 +86,7 @@ function JobsPage() {
     const locationTimeoutRef = useRef(null);
     const URL = "http://localhost:3000";
     const navigate = useNavigate();
+    const token = localStorage.getItem("token")
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -113,6 +115,8 @@ function JobsPage() {
     // Applied jobs tracking state
     const [appliedJobIds, setAppliedJobIds] = useState(new Set());
     const [isLoadingAppliedJobs, setIsLoadingAppliedJobs] = useState(false);
+    // Applied jobs state - NEW: Track which jobs user has applied to
+    const [appliedJobIds, setAppliedJobIds] = useState(new Set());
 
     // Dynamic options from backend data
     const [jobTypeOptions, setJobTypeOptions] = useState([]);
@@ -178,6 +182,11 @@ function JobsPage() {
         }
     };
 
+    // NEW: Check if job is applied by current user
+    const isJobApplied = (jobId) => {
+        return appliedJobIds.has(jobId);
+    };
+
     useEffect(() => {
         loadAllJobs();
     }, []);
@@ -203,11 +212,39 @@ function JobsPage() {
     const loadAllJobs = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${URL}/jobs`);
+            const response = await axios.get(`${URL}/jobs`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             console.log("Backend response:", response.data);
             const jobs = response.data.jobPosting || [];
+            const applicants = response.data.applicants || [];
+            
             setAllJobs(jobs);
             setFilteredJobs(jobs);
+
+            // NEW: Extract applied job IDs from applicants data
+            const currentUser = getCurrentUser();
+            const appliedIds = new Set();
+            
+            if (currentUser && applicants.length > 0) {
+                applicants.forEach(applicant => {
+                    // Check if this application belongs to current user
+                    // Try different possible field names for user ID
+                    const applicantUserId = applicant.userID || applicant.userId || applicant.usertD;
+                    
+                    if (parseInt(applicantUserId) === parseInt(currentUser.id)) {
+                        // Try different possible field names for job posting ID
+                        const jobId = applicant.JobPostingld || applicant.jobPostingID || applicant.jobPostingId;
+                        if (jobId) {
+                            appliedIds.add(parseInt(jobId));
+                            console.log(`Current user applied to job ID: ${jobId}`);
+                        }
+                    }
+                });
+            }
+
+            console.log("Applied job IDs:", appliedIds);
+            setAppliedJobIds(appliedIds);
 
             // Extract unique values from backend data for dropdowns
             extractDropdownOptions(jobs);
@@ -215,6 +252,7 @@ function JobsPage() {
             console.error("Error loading jobs:", error);
             setAllJobs([]);
             setFilteredJobs([]);
+            setAppliedJobIds(new Set());
         } finally {
             setLoading(false);
         }
@@ -497,6 +535,12 @@ function JobsPage() {
             return;
         }
 
+        // NEW: Check if already applied to this job
+        if (selectedJob && isJobApplied(selectedJob.id)) {
+            alert("You have already applied to this job.");
+            return;
+        }
+
         // Fetch user's resumes first
         const hasResumes = await fetchUserResumes();
         
@@ -523,6 +567,13 @@ function JobsPage() {
         if (!isUserLoggedIn()) {
             alert("Please log in or register first to apply for jobs.");
             navigate("/login");
+            return;
+        }
+
+        // NEW: Check if already applied to this job
+        if (selectedJob && isJobApplied(selectedJob.id)) {
+            alert("You have already applied to this job.");
+            setIsApplyDialogOpen(false);
             return;
         }
 
@@ -565,6 +616,7 @@ function JobsPage() {
             });
 
             // Add job ID to applied jobs set
+            // NEW: Add the job to applied jobs after successful submission
             setAppliedJobIds(prev => new Set([...prev, selectedJob.id]));
 
             // Reset form
@@ -980,6 +1032,24 @@ function JobsPage() {
                                                             </div>
                                                         )}
                                                     </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <Badge 
+                                                            variant={job.status === "active" ? "default" : "secondary"} 
+                                                            className={`ml-2 ${
+                                                                job.status === "active" 
+                                                                    ? "bg-green-100 text-green-800 border-green-200" 
+                                                                    : "bg-gray-100 text-gray-800 border-gray-200"
+                                                            }`}
+                                                        >
+                                                            {job.status}
+                                                        </Badge>
+                                                        {/* NEW: Show Applied badge if user has applied */}
+                                                        {isJobApplied(job.id) && (
+                                                            <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                                Applied
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 <p className="text-gray-700 mb-4 line-clamp-2 leading-relaxed">{job.description}</p>
@@ -1230,6 +1300,36 @@ function JobsPage() {
                                             </div>
                                         )
                                     ) : (
+                                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                                        {/* NEW: Show Applied button if already applied, otherwise Show Apply Now */}
+                                        {isJobApplied(selectedJob.id) ? (
+                                            <Button 
+                                                className="flex-1 h-14 text-lg bg-green-600 hover:bg-green-700 text-white shadow-md cursor-not-allowed"
+                                                disabled
+                                            >
+                                                <Check className="h-5 w-5 mr-2" />
+                                                Applied
+                                            </Button>
+                                        ) : (
+                                            <Button 
+                                                className="flex-1 h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                                                onClick={handleApplyNow} 
+                                                disabled={!isUserLoggedIn()}
+                                            >
+                                                Apply Now
+                                                <ArrowRight className="h-5 w-5 ml-2" />
+                                            </Button>
+                                        )}
+                                        <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
+                                            <Heart className="h-5 w-5 mr-2" />
+                                            Save
+                                        </Button>
+                                        <Button variant="outline" size="lg" className="h-14 border-gray-300 text-gray-700 hover:bg-gray-50">
+                                            <Share2 className="h-5 w-5 mr-2" />
+                                            Share
+                                        </Button>
+                                    </div>
+                                    {!isUserLoggedIn() && !isJobApplied(selectedJob.id) && (
                                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                             <p className="text-yellow-800 text-center">
                                                 🔒 You need to <Link to="/login" className="underline font-medium text-blue-600">log in</Link> or{" "}

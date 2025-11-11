@@ -1,0 +1,415 @@
+{
+  "name": "Andrei Neagoie's",
+  "email": "",
+  "phone": "",
+  "location": "",
+  "dateOfBirth": null,
+  "summary": "",
+  "objective": "",
+  "skills": [
+    {
+      "name": "Binary Trees",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Communication",
+      "type": "common_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Data Structures",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Leaner Style Sheets (LESS)",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "MASSIVE (Software)",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Nested Loops",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Recursion",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Sorting",
+      "type": "common_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Stack Overflow",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Time Complexity",
+      "type": "specialized_skill",
+      "proficiency": null
+    },
+    {
+      "name": "Writing",
+      "type": "common_skill",
+      "proficiency": null
+    }
+  ],
+  "workExperience": [],
+  "education": [],
+  "certifications": [],
+  "languages": [
+    {
+      "language": "English",
+      "proficiency": null
+    }
+  ],
+  "totalYearsExperience": 0,
+  "websites": [],
+  "linkedin": "",
+  "github": "",
+  "parsedAt": "2025-11-05T15:13:48.664Z",
+  "affindaDocumentId": null,
+  "rawData": {
+    "data": {
+      "certifications": [],
+      "dateOfBirth": null,
+      "education": [],
+      "emails": [],
+      "location": null,
+      "name": {
+        "raw": "Andrei Neagoie's",
+        "last": "Neagoie'S",
+        "first": "Andrei",
+        "title": "",
+        "middle": ""
+      },
+      "objective": "",
+      "phoneNumbers": [],
+      "phoneNumberDetails": [],
+      "publications": [],
+      "referees": [],
+      "sections": [
+        {
+          "sectionType": "Other",
+          "pageIndex": 0,
+          "text": "Interview Cheat Sheet \n\nFrom Andrei Neagoie's Master The Coding ",
+          "bbox": [
+            43.07,
+            50.860046,
+            288.348,
+            104.42505
+          ]
+        },
+        {
+          "sectionType": "Education",
+          "pageIndex": 0,
+          "text": "Interview: Data Structures + Algorithms ",
+          "bbox": [
+            262.245,
+            93.513,
+            465.74503,
+            104.42505
+          ]
+        },
+        {
+          "sectionType": "Skills/Interests/Languages",
+          "pageIndex": 0,
+          "text": "The 3 pillars of good code: \n1. Readable 2. Time Complexity 3. Space Complexity \nWhat skills interviewer is looking for: \nAnalytic Skills - How can you think through problems and analyze things? Coding Skills - Do you code well, by writing clean, simple, organized, readable code? Technical knowledge - Do you know the fundamentals of the job you're applying for? Communication skills: Does your personality match the companies' culture? \n\nStep By Step through a problem: \n\n1. When the interviewer says the question, write down the key points at the top (i.e. sorted array). Make sure you have all the details. Show how organized you are. \n\n2. Make sure you double check: What are the inputs? What are the outputs? \n\n3. What is the most important value of the problem? Do you have time, and space and memory, etc.. What is the main goal? \n\n4. Don't be annoying and ask too many questions. ",
+          "bbox": [
+            42.44278,
+            122.35425,
+            537.754,
+            524.40405
+          ]
+        },
+        {
+          "sectionType": "AdditionalInformation",
+          "pageIndex": 0,
+          "text": "5. Start with the naive / brute force approach. First thing that comes into mind. It shows that you're able to think well and critically (you don't need to write this code, just speak about it). \n\n6. Tell them why this approach is not the best (i.e. O(n^2) or higher, not readable, etc ... ) \n\n7. Walk through your approach, comment things and see where you may be able to break things. Any repetition, bottlenecks like O(N^2), or unnecessary work? Did you use all the information the interviewer gave you? Bottleneck is the part of the code with the biggest Big O. Focus on that. Sometimes this occurs with repeated work as well. \n\n8. Before you start coding, walk through your code and write down the steps you are going to follow. ",
+          "bbox": [
+            58.242,
+            555.3821,
+            546.9721,
+            775.926
+          ]
+        },
+        {
+          "sectionType": "Projects",
+          "pageIndex": 1,
+          "text": "9. Modularize your code from the very beginning. Break up your code into beautiful small pieces and add just comments if you need to. \n\n10. Start actually writing your code now. Keep in mind that the more you prepare and understand what you need to code, the better the whiteboard will go. So never start a whiteboard interview not being sure of how things are going to work out. That is a recipe for disaster. Keep in mind: A lot of interviews ask questions that you won't be able to fully answer on time. So think: What can I show in order to show that I can do this and I am better than other coders. Break things up in Functions (if you can't remember a method, just make up a function and you will at least have it there. Write something, and start with the easy part. \n\n11. Think about error checks and how you can break this code. Never make assumptions about the input. Assume people are trying to break your code and that Darth Vader is using your function. How will you safeguard it? Always check for false inputs that you don't want. Here is a trick: Comment in the code, the checks that you want to do… write the function, then tell the interviewer that you would write tests now to make your function fail (but you won't need to actually write the tests). \n\n12. Don't use bad / confusing names like i and j. Write code that reads well. \n\n13. Test your code: Check for no params, 0, undefined, null, massive arrays, async code, etc… Ask the interviewer if we can make assumption about the code. Can you make the answer return an error? Poke holes into your solution. Are you repeating yourself? \n\n14. Finally talk to the interviewer where you would improve the code. Does it work? Are there different approaches? Is it readable? What would you google to improve? How can performance be improved? Possibly: Ask the interviewer what was the most interesting solution you have seen to this problem \n\n15. If your interviewer is happy with the solution, the interview usually ends here. It is also common that the interviewer asks you extension questions, such as how you would handle the problem if the whole input is too large to fit into memory, or if the input arrives as a stream. This is a common follow - up question at Google, where they care a lot about scale. The answer is usually a divide - and - conquer approach — perform distributed processing of the data and only read certain chunks of the input from disk into memory, write the output back to disk and combine them later. ",
+          "bbox": [
+            52.5,
+            49.304016,
+            551.33905,
+            706.018
+          ]
+        },
+        {
+          "sectionType": "Projects",
+          "pageIndex": 2,
+          "text": "Good code checklist: \n\n[✅]It works [✅]Good use of data structures [✅]Code Re - use/ Do Not Repeat Yourself [✅]Modular - makes code more readable, maintainable and testable [✅]Less than O(N^2). We want to avoid nested loops if we can since they are expensive. Two separate loops are better than 2 nested loops [✅]Low Space Complexity --> Recursion can cause stack overflow, copying of large arrays may exceed memory of machine \n\nHeurestics to ace the question: \n[✅]Hash Maps are usually the answer to improve Time Complexity [✅]If it's a sorted array, use Binary tree to achieve O(log N). Divide and Conquer - Divide a data set into smaller chunks and then repeating a process with a subset of data. Binary search is a great example of this [✅]Try Sorting your input [✅]Hash tables and precomputed information (i.e. sorted) are some of the best ways to optimize your code [✅]Look at the Time vs Space tradeoff. Sometimes storing extra state in memory can help the time. (Runtime) [✅]If the interviewer is giving you advice / tips / hints. Follow them [✅]Space time tradeoffs: Hastables usually solve this a lot of the times. You use more space, but you can get a time optimization to the process. In programming, you often times can use up a little bit more space to get faster time \n\nAnd always remember: Communicate your thought process as much as possible. Don't worry about finishing it fast. Every part of the interview matters. ",
+          "bbox": [
+            42.465,
+            48.575195,
+            552.205,
+            554.682
+          ]
+        }
+      ],
+      "skills": [
+        {
+          "id": 1175310591,
+          "emsiId": "KS1210F6GZL0NS9MDVG1",
+          "name": "Binary Trees",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310596,
+          "emsiId": "KS122556LMQ829GZCCRV",
+          "name": "Communication",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "common_skill",
+          "sources": [
+            {
+              "section": "Skills/Interests/Languages",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310589,
+          "emsiId": "KS122Q26BWQ1PK3Y74C0",
+          "name": "Data Structures",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310598,
+          "emsiId": "ES5A281A8917181656AD",
+          "name": "Leaner Style Sheets (LESS)",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310592,
+          "emsiId": "KS1266C6Q3MN12890Y8C",
+          "name": "MASSIVE (Software)",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310595,
+          "emsiId": "KSYA3D0HV10KZZBH43HO",
+          "name": "Nested Loops",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310597,
+          "emsiId": "KS128G36HTCS83B3TQC1",
+          "name": "Recursion",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310594,
+          "emsiId": "KS440S66DFM34BM1MH7H",
+          "name": "Sorting",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "common_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310593,
+          "emsiId": "KSFYRGE9DK9S4GGF8VOI",
+          "name": "Stack Overflow",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310590,
+          "emsiId": "KSQQ65LDFMA07275LT7T",
+          "name": "Time Complexity",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "specialized_skill",
+          "sources": [
+            {
+              "section": "Skills/Interests/Languages",
+              "position": null,
+              "workExperienceId": null
+            },
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        },
+        {
+          "id": 1175310588,
+          "emsiId": "KS4425C7820LCHZS7VGX",
+          "name": "Writing",
+          "lastUsed": null,
+          "numberOfMonths": null,
+          "type": "common_skill",
+          "sources": [
+            {
+              "section": "Skills/Interests/Languages",
+              "position": null,
+              "workExperienceId": null
+            },
+            {
+              "section": "Projects",
+              "position": null,
+              "workExperienceId": null
+            }
+          ]
+        }
+      ],
+      "languages": [
+        "English"
+      ],
+      "summary": "",
+      "websites": [],
+      "linkedin": null,
+      "totalYearsExperience": 0,
+      "profession": null,
+      "workExperience": [],
+      "headShot": null,
+      "isResumeProbability": null,
+      "rawText": "Interview Cheat Sheet \n\nFrom Andrei Neagoie's Master The Coding \nInterview: Data Structures + Algorithms \nThe 3 pillars of good code: \n1. Readable 2. Time Complexity 3. Space Complexity \nWhat skills interviewer is looking for: \nAnalytic Skills - How can you think through problems and analyze things? Coding Skills - Do you code well, by writing clean, simple, organized, readable code? Technical knowledge - Do you know the fundamentals of the job you're applying for? Communication skills: Does your personality match the companies' culture? \n\nStep By Step through a problem: \n\n1. When the interviewer says the question, write down the key points at the top (i.e. sorted array). Make sure you have all the details. Show how organized you are. \n\n2. Make sure you double check: What are the inputs? What are the outputs? \n\n3. What is the most important value of the problem? Do you have time, and space and memory, etc.. What is the main goal? \n\n4. Don't be annoying and ask too many questions. \n5. Start with the naive / brute force approach. First thing that comes into mind. It shows that you're able to think well and critically (you don't need to write this code, just speak about it). \n\n6. Tell them why this approach is not the best (i.e. O(n^2) or higher, not readable, etc ... ) \n\n7. Walk through your approach, comment things and see where you may be able to break things. Any repetition, bottlenecks like O(N^2), or unnecessary work? Did you use all the information the interviewer gave you? Bottleneck is the part of the code with the biggest Big O. Focus on that. Sometimes this occurs with repeated work as well. \n\n8. Before you start coding, walk through your code and write down the steps you are going to follow. \n9. Modularize your code from the very beginning. Break up your code into beautiful small pieces and add just comments if you need to. \n\n10. Start actually writing your code now. Keep in mind that the more you prepare and understand what you need to code, the better the whiteboard will go. So never start a whiteboard interview not being sure of how things are going to work out. That is a recipe for disaster. Keep in mind: A lot of interviews ask questions that you won't be able to fully answer on time. So think: What can I show in order to show that I can do this and I am better than other coders. Break things up in Functions (if you can't remember a method, just make up a function and you will at least have it there. Write something, and start with the easy part. \n\n11. Think about error checks and how you can break this code. Never make assumptions about the input. Assume people are trying to break your code and that Darth Vader is using your function. How will you safeguard it? Always check for false inputs that you don't want. Here is a trick: Comment in the code, the checks that you want to do… write the function, then tell the interviewer that you would write tests now to make your function fail (but you won't need to actually write the tests). \n\n12. Don't use bad / confusing names like i and j. Write code that reads well. \n\n13. Test your code: Check for no params, 0, undefined, null, massive arrays, async code, etc… Ask the interviewer if we can make assumption about the code. Can you make the answer return an error? Poke holes into your solution. Are you repeating yourself? \n\n14. Finally talk to the interviewer where you would improve the code. Does it work? Are there different approaches? Is it readable? What would you google to improve? How can performance be improved? Possibly: Ask the interviewer what was the most interesting solution you have seen to this problem \n\n15. If your interviewer is happy with the solution, the interview usually ends here. It is also common that the interviewer asks you extension questions, such as how you would handle the problem if the whole input is too large to fit into memory, or if the input arrives as a stream. This is a common follow - up question at Google, where they care a lot about scale. The answer is usually a divide - and - conquer approach — perform distributed processing of the data and only read certain chunks of the input from disk into memory, write the output back to disk and combine them later. \nGood code checklist: \n\n[✅]It works [✅]Good use of data structures [✅]Code Re - use/ Do Not Repeat Yourself [✅]Modular - makes code more readable, maintainable and testable [✅]Less than O(N^2). We want to avoid nested loops if we can since they are expensive. Two separate loops are better than 2 nested loops [✅]Low Space Complexity --> Recursion can cause stack overflow, copying of large arrays may exceed memory of machine \n\nHeurestics to ace the question: \n[✅]Hash Maps are usually the answer to improve Time Complexity [✅]If it's a sorted array, use Binary tree to achieve O(log N). Divide and Conquer - Divide a data set into smaller chunks and then repeating a process with a subset of data. Binary search is a great example of this [✅]Try Sorting your input [✅]Hash tables and precomputed information (i.e. sorted) are some of the best ways to optimize your code [✅]Look at the Time vs Space tradeoff. Sometimes storing extra state in memory can help the time. (Runtime) [✅]If the interviewer is giving you advice / tips / hints. Follow them [✅]Space time tradeoffs: Hastables usually solve this a lot of the times. You use more space, but you can get a time optimization to the process. In programming, you often times can use up a little bit more space to get faster time \n\nAnd always remember: Communicate your thought process as much as possible. Don't worry about finishing it fast. Every part of the interview matters. ",
+      "redactedText": "Interview Cheat Sheet From Andrei Neagoie's Master The Coding\nInterview: Data Structures + Algorithms\nThe 3 pillars of good code: 1. Readable 2. Time Complexity 3. Space Complexity What skills interviewer is looking for: Analytic Skills - How can you think through problems and analyze things? Coding Skills - Do you code well, by writing clean, simple, organized, readable code? Technical knowledge - Do you know the fundamentals of the job you're applying for? Communication skills: Does your personality match the companies' culture? Step By Step through a problem: 1. When the interviewer says the question, write down the key points at the top (i.e. sorted array). Make sure you have all the details. Show how organized you are. 2. Make sure you double check: What are the inputs? What are the outputs? 3. What is the most important value of the problem? Do you have time, and space and memory, etc.. What is the main goal? 4. Don't be annoying and ask too many questions.\n5. Start with the naive / brute force approach. First thing that comes into mind. It shows that you're able to think well and critically (you don't need to write this code, just speak about it). 6. Tell **** why this approach is not the best (i.e. O(n^2) or higher, not readable, etc ... ) 7. Walk through your approach, comment things and see where you may be able to break things. Any repetition, bottlenecks like O(N^2), or unnecessary work? Did you use all the information the interviewer gave you? Bottleneck is the part of the code with the biggest Big O. Focus on that. Sometimes this occurs with repeated work as well. 8. Before you start coding, walk through your code and write down the steps you are going to follow.\n9. Modularize your code from the very beginning. Break up your code into beautiful small pieces and add just comments if you need to. 10. Start actually writing your code now. Keep in mind that the more you prepare and understand what you need to code, the better the whiteboard will go. So never start a whiteboard interview not being sure of how things are going to work out. That is a recipe for disaster. Keep in mind: A lot of interviews ask questions that you won't be able to fully answer on time. So think: What can I show in order to show that I can do this and I am better than other coders. Break things up in Functions (if you can't remember a method, just make up a function and you will at least have it there. Write something, and start with the easy part. 11. Think about error checks and how you can break this code. Never make assumptions about the input. Assume people are trying to break your code and that Darth Vader is using your function. How will you safeguard it? Always check for false inputs that you don't want. Here is a trick: Comment in the code, the checks that you want to do… write the function, then tell the interviewer that you would write tests now to make your function fail (but you won't need to actually write the tests). 12. Don't use bad / confusing names like i and j. Write code that reads well. 13. Test your code: Check for no params, 0, undefined, null, massive arrays, async code, etc… Ask the interviewer if we can make assumption about the code. Can you make the answer return an error? Poke holes into your solution. Are you repeating yourself? 14. Finally talk to the interviewer where you would improve the code. Does it work? Are there different approaches? Is it readable? What would you google to improve? How can performance be improved? Possibly: Ask the interviewer what was the most interesting solution you have seen to this problem 15. If your interviewer is happy with the solution, the interview usually ends here. It is also common that the interviewer asks you extension questions, such as how you would handle the problem if the whole input is too large to fit into memory, or if the input arrives as a stream. This is a common follow - up question at Google, where **** care a lot about scale. The answer is usually a divide - and - conquer approach — perform distributed processing of the data and only read certain chunks of the input from disk into memory, write the output back to disk and combine **** later.\nGood code checklist: [✅]It works [✅]Good use of data structures [✅]Code Re - use/ Do Not Repeat Yourself [✅]Modular - makes code more readable, maintainable and testable [✅]Less than O(N^2). We want to avoid nested loops if we can since **** are expensive. Two separate loops are better than 2 nested loops [✅]Low Space Complexity --> Recursion can cause stack overflow, copying of large arrays may exceed memory of machine Heurestics to ace the question: [✅]Hash Maps are usually the answer to improve Time Complexity [✅]If it's a sorted array, use Binary tree to achieve O(log N). Divide and Conquer - Divide a data set into smaller chunks and then repeating a process with a subset of data. Binary search is a great example of this [✅]Try Sorting your input [✅]Hash tables and precomputed information (i.e. sorted) are some of the best ways to optimize your code [✅]Look at the Time vs Space tradeoff. Sometimes storing extra state in memory can help the time. (Runtime) [✅]If the interviewer is giving you advice / tips / hints. Follow **** [✅]Space time tradeoffs: Hastables usually solve this a lot of the times. You use more space, but you can get a time optimization to the process. In programming, you often times can use up a little bit more space to get faster time And always remember: Communicate your thought process as much as possible. Don't worry about finishing it fast. Every part of the interview matters."
+    },
+    "meta": {
+      "identifier": "HqgCXocn",
+      "customIdentifier": null,
+      "ready": true,
+      "failed": false,
+      "readyDt": "2025-11-05T15:13:46.128585Z",
+      "fileName": "1762185939661.pdf",
+      "expiryTime": null,
+      "language": "en",
+      "pdf": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/documents/1762185939661_hV7Xc1m.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNLMRNFJ7S%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T151346Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkYwRAIgMwTBd187Y6BrkNyyHPFASXcjFrtbfEbNmffIMRoInPsCIFXNqMmSP2Dk9UaE1XNHqC1p5nCIV0dWJZ4nEr8Z0LQ6KpQFCJD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMzM1NTk0NTcxMTYyIgwVFtj%2F9RXN3S3foB0q6ATqq2AhXeA0ePIAmLl%2FJ0FbqmNPoHvNfhTwTBissmag670u%2Bl9E1xxw5IPbUaDa74ylREv1SKeU%2FtfLloGRP2h2g8vBg6VoIkv3%2Fq0Pra%2Bxj5PWF%2Bf%2FNHHXAmqPU9UqOmI9vICr6FnncDeQdaKhbf1QFldINtK5K%2BkezwjU3tYElKZRyMu%2B7hpiGxpNrrb%2FUsRGI5nW8CKYYHXiMjCHByte1tv7El85yhhV81jd43zFiXKBJmra1UAeKkoWG6qKgfGV%2FUxo6A4U7jVkpDQzAdlcerz7UwTs1fzfThe%2Bs6chVymmkily4sbiTA7ufwplys8BMWu8sBPmghaTbmmFkCjpaC23%2BCwJ4fXmxvY7lEtp9x5DU%2FrONOCHR0s%2B0CBwP5R%2BuusJDWw6rJTjqDbcQbwjs54M3%2FuaHiSx404fERa%2FAYVBxwv6gusWcV%2Fa%2FnJWDv4Uot3T0E%2BJZLg%2BhIDQrKqvVCrhkkOubmoI4sjMzN2jn9dnxrz6ECRHqkhF%2B4qNpe8o7ySL0NNB5l6PXu6y8w7TQ7XwpmVTiEBDOZk6syO%2B553rB9EdFvntTAbY83A4Umupwc%2B8XdUvZhJlVG%2FVDC2A7wWaj1fDQoxOOWAQ63bJhIWHGEXSWoASzqyR%2B1WkHwA7krU3lrvosmMy3OyoFebwbvEYX6fwqwKX40Vs3tRp%2FwcSsX5J8OSnr9gDry3SlRdRhvkFaVLMH1X%2Bxd8jdXIaUotSfTeSqs0XyHfk3npFoe739LqgIZOHZ3nUFb17mm9JpIX48bhERmlTIFM4J%2B18htLNuNM5jFebfyqCQHhoP0qIoNug2%2BkWMPzKrcgGOpkBW5UzqOCpaml7TRRg6UiAQAjaWJX5sHE5VamOHFmj4AUBizePfBTYOTZxMniQ5t3dFzl1cuAIfPROldHN5YWWJeqgPAa8vWGOyTRjHeJo2oFy0B6VW8Wfzl1HTfjC%2BIi8zMyFl8hkoyyOAe%2F2Ao8Sw6gvXDV7VMNyTcyfyEPr7sPNZ3eBMJsrzIdbmdgoETVxZiOTiriC5%2FzE&X-Amz-Signature=1b748a7585ecbb842776dc86a89233a6c3f5ecf13b0dcb7a4ad395576ff22eaf",
+      "parentDocument": null,
+      "childDocuments": [],
+      "pages": [
+        {
+          "id": 149625404,
+          "pageIndex": 0,
+          "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149625404_rbVS2ih.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNLMRNFJ7S%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T151346Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkYwRAIgMwTBd187Y6BrkNyyHPFASXcjFrtbfEbNmffIMRoInPsCIFXNqMmSP2Dk9UaE1XNHqC1p5nCIV0dWJZ4nEr8Z0LQ6KpQFCJD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMzM1NTk0NTcxMTYyIgwVFtj%2F9RXN3S3foB0q6ATqq2AhXeA0ePIAmLl%2FJ0FbqmNPoHvNfhTwTBissmag670u%2Bl9E1xxw5IPbUaDa74ylREv1SKeU%2FtfLloGRP2h2g8vBg6VoIkv3%2Fq0Pra%2Bxj5PWF%2Bf%2FNHHXAmqPU9UqOmI9vICr6FnncDeQdaKhbf1QFldINtK5K%2BkezwjU3tYElKZRyMu%2B7hpiGxpNrrb%2FUsRGI5nW8CKYYHXiMjCHByte1tv7El85yhhV81jd43zFiXKBJmra1UAeKkoWG6qKgfGV%2FUxo6A4U7jVkpDQzAdlcerz7UwTs1fzfThe%2Bs6chVymmkily4sbiTA7ufwplys8BMWu8sBPmghaTbmmFkCjpaC23%2BCwJ4fXmxvY7lEtp9x5DU%2FrONOCHR0s%2B0CBwP5R%2BuusJDWw6rJTjqDbcQbwjs54M3%2FuaHiSx404fERa%2FAYVBxwv6gusWcV%2Fa%2FnJWDv4Uot3T0E%2BJZLg%2BhIDQrKqvVCrhkkOubmoI4sjMzN2jn9dnxrz6ECRHqkhF%2B4qNpe8o7ySL0NNB5l6PXu6y8w7TQ7XwpmVTiEBDOZk6syO%2B553rB9EdFvntTAbY83A4Umupwc%2B8XdUvZhJlVG%2FVDC2A7wWaj1fDQoxOOWAQ63bJhIWHGEXSWoASzqyR%2B1WkHwA7krU3lrvosmMy3OyoFebwbvEYX6fwqwKX40Vs3tRp%2FwcSsX5J8OSnr9gDry3SlRdRhvkFaVLMH1X%2Bxd8jdXIaUotSfTeSqs0XyHfk3npFoe739LqgIZOHZ3nUFb17mm9JpIX48bhERmlTIFM4J%2B18htLNuNM5jFebfyqCQHhoP0qIoNug2%2BkWMPzKrcgGOpkBW5UzqOCpaml7TRRg6UiAQAjaWJX5sHE5VamOHFmj4AUBizePfBTYOTZxMniQ5t3dFzl1cuAIfPROldHN5YWWJeqgPAa8vWGOyTRjHeJo2oFy0B6VW8Wfzl1HTfjC%2BIi8zMyFl8hkoyyOAe%2F2Ao8Sw6gvXDV7VMNyTcyfyEPr7sPNZ3eBMJsrzIdbmdgoETVxZiOTiriC5%2FzE&X-Amz-Signature=1f889935a9599e3cfa4ad5c694f72a3453f40e47bffc184d285ef913dd5f9ed3",
+          "height": 841.8900146484375,
+          "width": 595.280029296875,
+          "rotation": 0
+        },
+        {
+          "id": 149625405,
+          "pageIndex": 1,
+          "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149625405_igtZTJk.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNLMRNFJ7S%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T151346Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkYwRAIgMwTBd187Y6BrkNyyHPFASXcjFrtbfEbNmffIMRoInPsCIFXNqMmSP2Dk9UaE1XNHqC1p5nCIV0dWJZ4nEr8Z0LQ6KpQFCJD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMzM1NTk0NTcxMTYyIgwVFtj%2F9RXN3S3foB0q6ATqq2AhXeA0ePIAmLl%2FJ0FbqmNPoHvNfhTwTBissmag670u%2Bl9E1xxw5IPbUaDa74ylREv1SKeU%2FtfLloGRP2h2g8vBg6VoIkv3%2Fq0Pra%2Bxj5PWF%2Bf%2FNHHXAmqPU9UqOmI9vICr6FnncDeQdaKhbf1QFldINtK5K%2BkezwjU3tYElKZRyMu%2B7hpiGxpNrrb%2FUsRGI5nW8CKYYHXiMjCHByte1tv7El85yhhV81jd43zFiXKBJmra1UAeKkoWG6qKgfGV%2FUxo6A4U7jVkpDQzAdlcerz7UwTs1fzfThe%2Bs6chVymmkily4sbiTA7ufwplys8BMWu8sBPmghaTbmmFkCjpaC23%2BCwJ4fXmxvY7lEtp9x5DU%2FrONOCHR0s%2B0CBwP5R%2BuusJDWw6rJTjqDbcQbwjs54M3%2FuaHiSx404fERa%2FAYVBxwv6gusWcV%2Fa%2FnJWDv4Uot3T0E%2BJZLg%2BhIDQrKqvVCrhkkOubmoI4sjMzN2jn9dnxrz6ECRHqkhF%2B4qNpe8o7ySL0NNB5l6PXu6y8w7TQ7XwpmVTiEBDOZk6syO%2B553rB9EdFvntTAbY83A4Umupwc%2B8XdUvZhJlVG%2FVDC2A7wWaj1fDQoxOOWAQ63bJhIWHGEXSWoASzqyR%2B1WkHwA7krU3lrvosmMy3OyoFebwbvEYX6fwqwKX40Vs3tRp%2FwcSsX5J8OSnr9gDry3SlRdRhvkFaVLMH1X%2Bxd8jdXIaUotSfTeSqs0XyHfk3npFoe739LqgIZOHZ3nUFb17mm9JpIX48bhERmlTIFM4J%2B18htLNuNM5jFebfyqCQHhoP0qIoNug2%2BkWMPzKrcgGOpkBW5UzqOCpaml7TRRg6UiAQAjaWJX5sHE5VamOHFmj4AUBizePfBTYOTZxMniQ5t3dFzl1cuAIfPROldHN5YWWJeqgPAa8vWGOyTRjHeJo2oFy0B6VW8Wfzl1HTfjC%2BIi8zMyFl8hkoyyOAe%2F2Ao8Sw6gvXDV7VMNyTcyfyEPr7sPNZ3eBMJsrzIdbmdgoETVxZiOTiriC5%2FzE&X-Amz-Signature=d42bf6e7d52e0738c93d72ec4f3c4e73de0cbbca7bf0326489fc421c8dcf9cba",
+          "height": 841.8900146484375,
+          "width": 595.280029296875,
+          "rotation": 0
+        },
+        {
+          "id": 149625406,
+          "pageIndex": 2,
+          "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/149625406_rW4jfiO.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNLMRNFJ7S%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T151346Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkYwRAIgMwTBd187Y6BrkNyyHPFASXcjFrtbfEbNmffIMRoInPsCIFXNqMmSP2Dk9UaE1XNHqC1p5nCIV0dWJZ4nEr8Z0LQ6KpQFCJD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMzM1NTk0NTcxMTYyIgwVFtj%2F9RXN3S3foB0q6ATqq2AhXeA0ePIAmLl%2FJ0FbqmNPoHvNfhTwTBissmag670u%2Bl9E1xxw5IPbUaDa74ylREv1SKeU%2FtfLloGRP2h2g8vBg6VoIkv3%2Fq0Pra%2Bxj5PWF%2Bf%2FNHHXAmqPU9UqOmI9vICr6FnncDeQdaKhbf1QFldINtK5K%2BkezwjU3tYElKZRyMu%2B7hpiGxpNrrb%2FUsRGI5nW8CKYYHXiMjCHByte1tv7El85yhhV81jd43zFiXKBJmra1UAeKkoWG6qKgfGV%2FUxo6A4U7jVkpDQzAdlcerz7UwTs1fzfThe%2Bs6chVymmkily4sbiTA7ufwplys8BMWu8sBPmghaTbmmFkCjpaC23%2BCwJ4fXmxvY7lEtp9x5DU%2FrONOCHR0s%2B0CBwP5R%2BuusJDWw6rJTjqDbcQbwjs54M3%2FuaHiSx404fERa%2FAYVBxwv6gusWcV%2Fa%2FnJWDv4Uot3T0E%2BJZLg%2BhIDQrKqvVCrhkkOubmoI4sjMzN2jn9dnxrz6ECRHqkhF%2B4qNpe8o7ySL0NNB5l6PXu6y8w7TQ7XwpmVTiEBDOZk6syO%2B553rB9EdFvntTAbY83A4Umupwc%2B8XdUvZhJlVG%2FVDC2A7wWaj1fDQoxOOWAQ63bJhIWHGEXSWoASzqyR%2B1WkHwA7krU3lrvosmMy3OyoFebwbvEYX6fwqwKX40Vs3tRp%2FwcSsX5J8OSnr9gDry3SlRdRhvkFaVLMH1X%2Bxd8jdXIaUotSfTeSqs0XyHfk3npFoe739LqgIZOHZ3nUFb17mm9JpIX48bhERmlTIFM4J%2B18htLNuNM5jFebfyqCQHhoP0qIoNug2%2BkWMPzKrcgGOpkBW5UzqOCpaml7TRRg6UiAQAjaWJX5sHE5VamOHFmj4AUBizePfBTYOTZxMniQ5t3dFzl1cuAIfPROldHN5YWWJeqgPAa8vWGOyTRjHeJo2oFy0B6VW8Wfzl1HTfjC%2BIi8zMyFl8hkoyyOAe%2F2Ao8Sw6gvXDV7VMNyTcyfyEPr7sPNZ3eBMJsrzIdbmdgoETVxZiOTiriC5%2FzE&X-Amz-Signature=511ba009b349a8d1bd0d20bae0c58b8af1751f005b26d2dbf34ae6c61404c326",
+          "height": 841.8900146484375,
+          "width": 595.280029296875,
+          "rotation": 0
+        }
+      ],
+      "ocrConfidence": null,
+      "reviewUrl": "https://app.affinda.com/review/69683601?document_signature=eyJkb2N1bWVudF9pZCI6Njk2ODM2MDEsIndvcmtzcGFjZV9pZCI6MTE0NzA2OCwib3JnYW5pemF0aW9uX2lkIjozMjk2MSwiZGVsZWdhdGluZ191c2VyX2lkIjoyNjE0NX0:1vGfCk:M0ei4obFaAfd4zEbDOpJe_xKZi3-f6HNwW69mhVKvvg:1vGfCk:6KX8eHEcAjae-ThyxYTzF-fS54PExhp8xmJhyoffLtE",
+      "validatedDt": null,
+      "isVerified": false,
+      "exportedDt": null,
+      "isExported": false,
+      "createdDt": "2025-11-05T15:13:43.473481Z",
+      "errorDetail": null,
+      "documentType": "resume",
+      "file": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/documents/1762185939661_hV7Xc1m.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNLMRNFJ7S%2F20251105%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20251105T151346Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEMf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0yIkYwRAIgMwTBd187Y6BrkNyyHPFASXcjFrtbfEbNmffIMRoInPsCIFXNqMmSP2Dk9UaE1XNHqC1p5nCIV0dWJZ4nEr8Z0LQ6KpQFCJD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQAxoMMzM1NTk0NTcxMTYyIgwVFtj%2F9RXN3S3foB0q6ATqq2AhXeA0ePIAmLl%2FJ0FbqmNPoHvNfhTwTBissmag670u%2Bl9E1xxw5IPbUaDa74ylREv1SKeU%2FtfLloGRP2h2g8vBg6VoIkv3%2Fq0Pra%2Bxj5PWF%2Bf%2FNHHXAmqPU9UqOmI9vICr6FnncDeQdaKhbf1QFldINtK5K%2BkezwjU3tYElKZRyMu%2B7hpiGxpNrrb%2FUsRGI5nW8CKYYHXiMjCHByte1tv7El85yhhV81jd43zFiXKBJmra1UAeKkoWG6qKgfGV%2FUxo6A4U7jVkpDQzAdlcerz7UwTs1fzfThe%2Bs6chVymmkily4sbiTA7ufwplys8BMWu8sBPmghaTbmmFkCjpaC23%2BCwJ4fXmxvY7lEtp9x5DU%2FrONOCHR0s%2B0CBwP5R%2BuusJDWw6rJTjqDbcQbwjs54M3%2FuaHiSx404fERa%2FAYVBxwv6gusWcV%2Fa%2FnJWDv4Uot3T0E%2BJZLg%2BhIDQrKqvVCrhkkOubmoI4sjMzN2jn9dnxrz6ECRHqkhF%2B4qNpe8o7ySL0NNB5l6PXu6y8w7TQ7XwpmVTiEBDOZk6syO%2B553rB9EdFvntTAbY83A4Umupwc%2B8XdUvZhJlVG%2FVDC2A7wWaj1fDQoxOOWAQ63bJhIWHGEXSWoASzqyR%2B1WkHwA7krU3lrvosmMy3OyoFebwbvEYX6fwqwKX40Vs3tRp%2FwcSsX5J8OSnr9gDry3SlRdRhvkFaVLMH1X%2Bxd8jdXIaUotSfTeSqs0XyHfk3npFoe739LqgIZOHZ3nUFb17mm9JpIX48bhERmlTIFM4J%2B18htLNuNM5jFebfyqCQHhoP0qIoNug2%2BkWMPzKrcgGOpkBW5UzqOCpaml7TRRg6UiAQAjaWJX5sHE5VamOHFmj4AUBizePfBTYOTZxMniQ5t3dFzl1cuAIfPROldHN5YWWJeqgPAa8vWGOyTRjHeJo2oFy0B6VW8Wfzl1HTfjC%2BIi8zMyFl8hkoyyOAe%2F2Ao8Sw6gvXDV7VMNyTcyfyEPr7sPNZ3eBMJsrzIdbmdgoETVxZiOTiriC5%2FzE&X-Amz-Signature=1b748a7585ecbb842776dc86a89233a6c3f5ecf13b0dcb7a4ad395576ff22eaf",
+      "regionBias": null,
+      "isOcrd": false
+    },
+    "error": {
+      "errorCode": null,
+      "errorDetail": null
+    }
+  }
+}

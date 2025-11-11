@@ -55,6 +55,7 @@ function AppliedJobsPage() {
     const [socket, setSocket] = useState(null);
     const [lastUpdate, setLastUpdate] = useState(null);
     const [debugInfo, setDebugInfo] = useState("");
+    const [recentlyUpdated, setRecentlyUpdated] = useState(new Set());
     const URL = "http://localhost:3000";
 
     const statusOptions = [
@@ -66,6 +67,20 @@ function AppliedJobsPage() {
         { value: "rejected", label: "Rejected" },
         { value: "hired", label: "Hired" },
     ];
+
+    // Helper function to get user ID from token
+    const getUserIdFromToken = () => {
+        const token = localStorage.getItem("token");
+        if (!token) return null;
+        
+        try {
+            const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+            return tokenPayload.id;
+        } catch (e) {
+            console.error("Error decoding token:", e);
+            return null;
+        }
+    };
 
     // Initialize socket connection for real-time updates
     useEffect(() => {
@@ -86,17 +101,36 @@ function AppliedJobsPage() {
         newSocket.on("connect", () => {
             console.log("✅ Connected to server from Applied Jobs");
             setDebugInfo(prev => prev + " • Socket connected");
+            
+            // Join a room for application updates
+            const userId = getUserIdFromToken();
+            if (userId) {
+                newSocket.emit("joinApplicationRoom", { userId });
+            }
         });
 
-        newSocket.on("disconnect", () => {
-            console.log("❌ Disconnected from server");
-            setDebugInfo(prev => prev + " • Socket disconnected");
+        newSocket.on("disconnect", (reason) => {
+            console.log("❌ Disconnected from server:", reason);
+            setDebugInfo(prev => prev + ` • Socket disconnected: ${reason}`);
+        });
+
+        newSocket.on("connect_error", (error) => {
+            console.log("❌ Socket connection error:", error);
+            setDebugInfo(prev => prev + ` • Connection error: ${error.message}`);
         });
 
         // Listen for application status updates
         newSocket.on("applicationStatusUpdated", (data) => {
             console.log("📨 Real-time status update received:", data);
             handleRealTimeStatusUpdate(data);
+        });
+
+        // Listen for new application notifications
+        newSocket.on("newApplication", (data) => {
+            console.log("📨 New application received:", data);
+            setDebugInfo(prev => prev + ` • New application: ${data.jobTitle}`);
+            // Reload applications to get the new one
+            loadAppliedJobs();
         });
 
         setSocket(newSocket);
@@ -111,14 +145,53 @@ function AppliedJobsPage() {
 
     // Handle real-time status updates
     const handleRealTimeStatusUpdate = (updateData) => {
+        console.log("📨 Real-time status update received:", updateData);
+        
+        // Add to recently updated for animation
+        const updateId = updateData.applicationId || updateData.id;
+        setRecentlyUpdated(prev => new Set(prev).add(updateId));
+        
+        // Remove from recently updated after animation
+        setTimeout(() => {
+            setRecentlyUpdated(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(updateId);
+                return newSet;
+            });
+        }, 3000); // 3 second animation
+        
         setAppliedJobs(prevApplications => {
             const updatedApplications = prevApplications.map(app => {
+                // Check multiple possible ID fields to match the application
                 if (app.id === updateData.applicationId || 
                     app.applicationId === updateData.applicationId ||
-                    app.job?.id === updateData.jobId) {
+                    app.job?.id === updateData.jobId ||
+                    app.id === updateData.id) {
                     
                     console.log(`🔄 Updating application ${app.id} status from ${app.status} to ${updateData.status}`);
                     
+                    const updatedApp = {
+                        ...app,
+                        status: updateData.status,
+                        updatedAt: updateData.updatedAt || new Date().toISOString()
+                    };
+                    
+                    console.log("Updated application:", updatedApp);
+                    return updatedApp;
+                }
+                return app;
+            });
+
+            return updatedApplications;
+        });
+
+        // Also update filtered jobs
+        setFilteredJobs(prevFiltered => 
+            prevFiltered.map(app => {
+                if (app.id === updateData.applicationId || 
+                    app.applicationId === updateData.applicationId ||
+                    app.job?.id === updateData.jobId ||
+                    app.id === updateData.id) {
                     return {
                         ...app,
                         status: updateData.status,
@@ -126,36 +199,40 @@ function AppliedJobsPage() {
                     };
                 }
                 return app;
-            });
+            })
+        );
 
-            setFilteredJobs(prevFiltered => 
-                prevFiltered.map(app => {
-                    if (app.id === updateData.applicationId || 
-                        app.applicationId === updateData.applicationId ||
-                        app.job?.id === updateData.jobId) {
-                        return {
-                            ...app,
-                            status: updateData.status
-                        };
-                    }
-                    return app;
-                })
-            );
+        // Update selected application if it's the one being viewed
+        if (selectedApplication && 
+            (selectedApplication.id === updateData.applicationId || 
+             selectedApplication.applicationId === updateData.applicationId ||
+             selectedApplication.job?.id === updateData.jobId ||
+             selectedApplication.id === updateData.id)) {
+            setSelectedApplication(prev => ({
+                ...prev,
+                status: updateData.status,
+                updatedAt: updateData.updatedAt || new Date().toISOString()
+            }));
+        }
 
-            if (selectedApplication && 
-                (selectedApplication.id === updateData.applicationId || 
-                 selectedApplication.applicationId === updateData.applicationId ||
-                 selectedApplication.job?.id === updateData.jobId)) {
-                setSelectedApplication(prev => ({
-                    ...prev,
-                    status: updateData.status
-                }));
-            }
+        setLastUpdate(new Date());
+        setDebugInfo(prev => prev + ` • Status updated: ${updateData.status}`);
+    };
 
-            setLastUpdate(new Date());
-            setDebugInfo(prev => prev + ` • Status updated: ${updateData.status}`);
-            return updatedApplications;
-        });
+    // Test function for real-time updates
+    const testStatusUpdate = () => {
+        if (appliedJobs.length === 0) {
+            setDebugInfo("❌ No applications to test with");
+            return;
+        }
+        
+        // Simulate a status update for testing
+        const testUpdate = {
+            applicationId: appliedJobs[0]?.id,
+            status: appliedJobs[0]?.status === "under_review" ? "shortlisted" : "under_review",
+            updatedAt: new Date().toISOString()
+        };
+        handleRealTimeStatusUpdate(testUpdate);
     };
 
     useEffect(() => {
@@ -206,7 +283,6 @@ function AppliedJobsPage() {
                 console.log(`🎉 Found ${response.data.userApplications.length} applications from backend`);
                 
                 // Transform the data based on your actual backend structure
-                // In your loadAppliedJobs function, update the transformation:
                 const transformedApplications = response.data.userApplications.map((app) => {
                     console.log("Raw application data:", app);
                     console.log("Application ID from backend:", app.id);
@@ -304,7 +380,7 @@ function AppliedJobsPage() {
         setIsDrawerOpen(true);
     };
 
-    const getStatusBadge = (status) => {
+    const getStatusBadge = (status, applicationId) => {
         const statusConfig = {
             submitted: { label: "Submitted", color: "bg-blue-100 text-blue-800 border-blue-200" },
             under_review: { label: "Under Review", color: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -315,10 +391,19 @@ function AppliedJobsPage() {
         };
 
         const config = statusConfig[status] || statusConfig.submitted;
+        const isRecentlyUpdated = recentlyUpdated.has(applicationId);
 
         return (
-            <Badge variant="outline" className={`${config.color} font-medium`}>
+            <Badge 
+                variant="outline" 
+                className={`${config.color} font-medium transition-all duration-500 ${
+                    isRecentlyUpdated ? 'animate-pulse ring-2 ring-opacity-50 ring-current scale-110' : ''
+                }`}
+            >
                 {config.label}
+                {isRecentlyUpdated && (
+                    <span className="ml-1 text-xs">🔄</span>
+                )}
             </Badge>
         );
     };
@@ -392,23 +477,52 @@ function AppliedJobsPage() {
                     <CardContent className="p-4">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h3 className="font-semibold text-blue-800">Application Status</h3>
+                                <h3 className="font-semibold text-blue-800 flex items-center gap-2">
+                                    Application Status
+                                    {socket?.connected && (
+                                        <span className="flex items-center gap-1 text-sm font-normal text-green-700">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                            Live Updates
+                                        </span>
+                                    )}
+                                </h3>
                                 <p className="text-sm text-blue-700">{debugInfo}</p>
                                 {lastUpdate && (
                                     <p className="text-xs text-blue-600 mt-1">
-                                        Last update: {formatTimeAgo(lastUpdate)}
+                                        Last update: {formatTimeAgo(lastUpdate)} ({formatDateTime(lastUpdate)})
                                     </p>
                                 )}
                             </div>
-                            <Button 
-                                onClick={loadAppliedJobs} 
-                                variant="outline" 
-                                size="sm"
-                                className="border-blue-300 text-blue-700"
-                            >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Refresh
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button 
+                                    onClick={loadAppliedJobs} 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="border-blue-300 text-blue-700"
+                                >
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Refresh
+                                </Button>
+                                <Button 
+                                    onClick={testStatusUpdate} 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="border-green-300 text-green-700"
+                                    disabled={appliedJobs.length === 0}
+                                >
+                                    Test Status Update
+                                </Button>
+                                {!socket?.connected && (
+                                    <Button 
+                                        onClick={() => socket?.connect()} 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="border-red-300 text-red-700"
+                                    >
+                                        Reconnect
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -591,7 +705,7 @@ function AppliedJobsPage() {
                                             <div className="flex-1">
                                                 <div className="flex items-start justify-between mb-3">
                                                     <h3 className="text-xl font-bold text-gray-900">{application.job.title}</h3>
-                                                    {getStatusBadge(application.status)}
+                                                    {getStatusBadge(application.status, application.id || application.applicationId)}
                                                 </div>
                                                 
                                                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
@@ -666,7 +780,7 @@ function AppliedJobsPage() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {getStatusIcon(selectedApplication?.status)}
-                                                {getStatusBadge(selectedApplication?.status)}
+                                                {selectedApplication && getStatusBadge(selectedApplication.status, selectedApplication.id || selectedApplication.applicationId)}
                                             </div>
                                         </div>
                                     </DrawerDescription>

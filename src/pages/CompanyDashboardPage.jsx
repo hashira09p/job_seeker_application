@@ -1,4 +1,4 @@
-import React, { useState, useEffect} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
 } from "@/components/ui/card";
@@ -27,13 +27,14 @@ import {
   Filter, MoreHorizontal, Eye, Edit, Trash2, Calendar, Mail, Phone, MapPin,
   Building, DollarSign, Clock, BarChart3, Settings, Home, Menu, Download, Star,
   Target, Award, CheckCircle, XCircle, Clock3, UserCheck, UserX, MessageSquare,
-  ExternalLink, Upload, Sparkles, AlertCircle, ArrowLeft, Plus, LogOut
+  ExternalLink, Upload, Sparkles, AlertCircle, ArrowLeft, Plus, LogOut, Bell, X
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
 
 function CompanyDashboardPage() {
   const [activeView, setActiveView] = useState('dashboard');
@@ -44,6 +45,9 @@ function CompanyDashboardPage() {
   const [editingJob, setEditingJob] = useState(null);
   const navigate = useNavigate();
   const URL = "http://localhost:3000";
+  
+  // Socket reference
+  const socketRef = useRef(null);
 
   // Form validation states
   const [formErrors, setFormErrors] = useState({});
@@ -57,8 +61,17 @@ function CompanyDashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [parsedData, setParsedData] = useState(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isParsingComplete, setIsParsingComplete] = useState(false);
+  const [uploadedDocumentId, setUploadedDocumentId] = useState(null);
+  const [parseError, setParseError] = useState("");
   const [user, setUser] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const [createJobPosting, setCreateJobPosting] = useState({
     title: "",
@@ -79,9 +92,192 @@ function CompanyDashboardPage() {
   // Search state for job applicants view - ONLY search remains
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ✅ MOVED TO TOP: sidebarItems definition
+  const sidebarItems = [
+    {
+      title: "Dashboard",
+      icon: BarChart3,
+      view: "dashboard"
+    },
+    {
+      title: "Job Postings",
+      icon: Briefcase,
+      view: "jobs"
+    },
+    {
+      title: "Create Job Posting",
+      icon: Plus,
+      view: "create-job-posting"
+    }
+  ];
+
+  // Initialize Socket Connection
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // Initialize socket connection
+    socketRef.current = io(URL, {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    // Socket event listeners
+    socketRef.current.on('connect', () => {
+      console.log('Connected to server via WebSocket');
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    // Listen for new application submissions from your backend
+    socketRef.current.on('someoneSubmitApplication', (data) => {
+      console.log('New application received:', data);
+      
+      // Add notification for new application
+      addNotification({
+        id: Date.now() + Math.random(), // Unique ID
+        title: "New Applicant",
+        message: `Someone applied for "${data.jobTitle}" position`,
+        type: "applicant",
+        read: false,
+        createdAt: new Date().toISOString(),
+        jobTitle: data.jobTitle,
+        companyName: data.company
+      });
+      
+      // Refresh data to get the new applicant
+      fetchData();
+    });
+
+    // Listen for other company-related events
+    socketRef.current.on('job_approved', (data) => {
+      console.log('Job approved:', data);
+      addNotification({
+        id: Date.now() + Math.random(),
+        title: "Job Approved",
+        message: `Your "${data.jobTitle}" job posting has been approved and is now live`,
+        type: "approval",
+        read: false,
+        createdAt: new Date().toISOString(),
+        jobId: data.jobId
+      });
+    });
+
+    socketRef.current.on('job_rejected', (data) => {
+      console.log('Job rejected:', data);
+      addNotification({
+        id: Date.now() + Math.random(),
+        title: "Job Requires Changes",
+        message: `Your "${data.jobTitle}" job posting needs modifications`,
+        type: "alert",
+        read: false,
+        createdAt: new Date().toISOString(),
+        jobId: data.jobId
+      });
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Add notification to state
+  const addNotification = (notification) => {
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+    
+    // Show browser notification if permitted
+    if (Notification.permission === 'granted') {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        tag: 'hirelink-notification'
+      });
+    }
+    
+    // Auto-hide notification after 5 seconds
+    setTimeout(() => {
+      setShowNotifications(false);
+    }, 5000);
+  };
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Fetch notifications from backend (optional - for persistent notifications)
+  const fetchNotifications = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      console.log("Fetching notifications...");
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  // Mark all as read
+  const markAllAsRead = async () => {
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    setUnreadCount(0);
+  };
+
+  // Toggle notifications dropdown
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && unreadCount > 0) {
+      markAllAsRead();
+    }
+  };
+
+  // Handle notification click (navigate to relevant page)
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    setShowNotifications(false);
+
+    switch (notification.type) {
+      case 'applicant':
+        setActiveView('jobs');
+        break;
+      case 'approval':
+      case 'alert':
+        setActiveView('jobs');
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Load notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
   // Logout function
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
       localStorage.removeItem('token');
       navigate('/');
     }
@@ -137,13 +333,11 @@ function CompanyDashboardPage() {
   const handleStatusUpdate = async (newStatus) => {
     if (!selectedApplicant) return;
 
-    // Use applicantId if available, otherwise fall back to userID or id
     const applicantId = selectedApplicant.applicantId || selectedApplicant.id || selectedApplicant.userID;
     
     const success = await updateApplicantStatus(applicantId, newStatus);
     
     if (success) {
-      // Update the applicant status in local state - use the same ID logic
       const updatedApplicants = applicants.map(applicant => {
         const currentApplicantId = applicant.applicantId || applicant.id || applicant.userID;
         return currentApplicantId === applicantId 
@@ -152,7 +346,6 @@ function CompanyDashboardPage() {
       });
       setApplicants(updatedApplicants);
 
-      // Update job applicants if we're in the job applicants view
       if (selectedJob) {
         const updatedJobApplicants = jobApplicants.map(applicant => {
           const currentApplicantId = applicant.applicantId || applicant.id || applicant.userID;
@@ -163,7 +356,6 @@ function CompanyDashboardPage() {
         setJobApplicants(updatedJobApplicants);
       }
 
-      // Update the selected applicant in the drawer
       setSelectedApplicant(prev => prev ? { ...prev, status: newStatus } : null);
       
       alert(`Applicant status updated to ${newStatus}`);
@@ -177,7 +369,6 @@ function CompanyDashboardPage() {
       [name]: value
     });
     
-    // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors({
         ...formErrors,
@@ -229,7 +420,6 @@ function CompanyDashboardPage() {
         setJobPostings(prev => [...prev, newJob]);
       }
       
-      // Reset form
       setCreateJobPosting({
         title: "",
         description: "",
@@ -247,53 +437,73 @@ function CompanyDashboardPage() {
     }
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/")
-        return;
-      }
+  // Fetch data function - FIXED APPLICANT COUNTING
+  const fetchData = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/")
+      return;
+    }
 
-      try{
-        const result = await axios.get(`${URL}/companyDashboard`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log("Backend response:", result.data);
+    try {
+      const result = await axios.get(`${URL}/companyDashboard`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log("Backend response:", result.data);
+      
+      if(result.data.role == "JobSeeker"){
+        navigate("/")
+      } else {
+        setUser(result.data);
+        const jobPostingsData = result.data.jobPostings || [];
+        setJobPostings(jobPostingsData);
         
-        if(result.data.role == "JobSeeker"){
-          navigate("/")
-        }else{
-          setUser(result.data);
-          setJobPostings(result.data.jobPostings || []);
+        // FIXED: Properly extract applicants with correct jobId mapping
+        const allApplicants = [];
+        
+        jobPostingsData.forEach(job => {
+          const jobApplicants = job.applicants || [];
+          console.log(`Job "${job.title}" has ${jobApplicants.length} applicants:`, jobApplicants);
           
-          // FIXED: Properly extract applicants from jobPostings
-          const allApplicants = result.data.jobPostings?.flatMap(job => 
-            (job.applicants || []).map(applicant => ({
+          // Ensure we're properly mapping each applicant with their job ID
+          jobApplicants.forEach(applicant => {
+            // Use applicant.id as the unique identifier, fallback to other IDs
+            const applicantId = applicant.id || applicant.applicantId || applicant.userID;
+            
+            allApplicants.push({
               ...applicant,
-              applicantId: applicant.id || applicant.applicantId, // Use consistent ID
-              jobId: job.id,
+              applicantId: applicantId,
+              jobId: job.id, // Use the job's ID
               position: job.title,
-              // Ensure all required fields have fallbacks
-              name: applicant.name || 'Unknown Applicant',
+              name: applicant.name || applicant.fullName || 'Unknown Applicant',
               email: applicant.email || '',
               status: applicant.status || 'pending',
-              // Use createdAt from database for applied date
               appliedDate: applicant.createdAt ? new Date(applicant.createdAt).toLocaleDateString() : 'Not specified',
-              createdAt: applicant.createdAt || applicant.appliedDate || new Date().toISOString()
-            }))
-          ) || [];
-          
-          console.log("Extracted applicants:", allApplicants);
-          setApplicants(allApplicants);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        navigate("/login")
-      } finally {
-        setIsLoading(false);
+              createdAt: applicant.createdAt || new Date().toISOString()
+            });
+          });
+        });
+        
+        console.log("All extracted applicants:", allApplicants);
+        console.log("Total applicants count:", allApplicants.length);
+        setApplicants(allApplicants);
+        
+        // Debug: Log applicant counts per job
+        jobPostingsData.forEach(job => {
+          const jobApplicants = allApplicants.filter(app => app.jobId === job.id);
+          console.log(`Job "${job.title}" (ID: ${job.id}) has ${jobApplicants.length} applicants`);
+        });
       }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      navigate("/login")
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
     fetchData();
   }, [navigate]);
 
@@ -301,7 +511,13 @@ function CompanyDashboardPage() {
   useEffect(() => {
     console.log("Job Postings:", jobPostings);
     console.log("Applicants:", applicants);
-    console.log("Stats:", stats);
+    console.log("Total applicants count:", applicants.length);
+    
+    // Debug applicant counts
+    jobPostings.forEach(job => {
+      const jobApplicants = applicants.filter(app => app.jobId === job.id);
+      console.log(`[DEBUG] Job "${job.title}" (ID: ${job.id}) has ${jobApplicants.length} applicants`);
+    });
   }, [jobPostings, applicants]);
 
   // Fetch applicants for a specific job from backend - FIXED
@@ -312,13 +528,11 @@ function CompanyDashboardPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Ensure each applicant has a consistent ID
       const applicantsWithIds = (response.data.applicants || []).map(applicant => ({
         ...applicant,
-        applicantId: applicant.id, // Store the applicant ID consistently
+        applicantId: applicant.id,
         jobId: jobId,
         position: response.data.job?.title || selectedJob?.title || "",
-        // Use createdAt from database for applied date
         appliedDate: applicant.createdAt ? new Date(applicant.createdAt).toLocaleDateString() : 'Not specified'
       }));
 
@@ -332,8 +546,6 @@ function CompanyDashboardPage() {
   // Download the Applicants Resume
   const handleDownloadResume = async (applicant) => {
     const token = localStorage.getItem("token");
-    console.log(applicant.Document?.id)
-
     const applicantDocumentId = applicant.Document?.id;
     
     if (!applicantDocumentId) {
@@ -402,10 +614,10 @@ function CompanyDashboardPage() {
     }
   };
 
-  // Calculate statistics based on real data - IMPROVED
+  // Calculate statistics based on real data - FIXED to use the applicants state
   const stats = {
     totalJobs: jobPostings.length,
-    totalApplicants: applicants.length,
+    totalApplicants: applicants.length, // This should now show the correct count
     pendingApplications: applicants.filter(a => a.status === 'pending' || !a.status).length,
     shortlistedCandidates: applicants.filter(a => a.status === 'shortlisted').length,
     interviewedCandidates: applicants.filter(a => a.status === 'interviewed').length,
@@ -443,29 +655,6 @@ function CompanyDashboardPage() {
     }
   }
 
-  const sidebarItems = [
-    {
-      title: "Dashboard",
-      icon: BarChart3,
-      view: "dashboard"
-    },
-    {
-      title: "Job Postings",
-      icon: Briefcase,
-      view: "jobs"
-    },
-    {
-      title: "Resume Parser",
-      icon: Target,
-      view: "resume-parser"
-    },
-    {
-      title: "Create Job Posting",
-      icon: Plus,
-      view: "create-job-posting"
-    }
-  ]
-
   // Job posting management functions
   const handleEditJob = async (jobId, updatedData) => {
     try {
@@ -500,13 +689,8 @@ function CompanyDashboardPage() {
     return false;
   };
 
-  // Column definitions for job postings table
+  // Column definitions for job postings table - FIXED APPLICANT COUNT
   const jobPostingsColumns = [
-    {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ row }) => <div className="font-medium">#{row.getValue("id")}</div>,
-    },
     {
       accessorKey: "title",
       header: "Title",
@@ -531,13 +715,18 @@ function CompanyDashboardPage() {
       accessorKey: "applicants",
       header: "Applicants",
       cell: ({ row }) => {
-        const jobApplicants = applicants.filter(app => app.jobId === row.original.id);
+        const jobId = row.original.id;
+        
+        // FIXED: Count applicants for this specific job - CORRECTED TYPO
+        const jobApplicants = applicants.filter(app => app.jobId === jobId);
+        const applicantCount = jobApplicants.length;
+        
         return (
           <div 
             className="cursor-pointer hover:text-primary hover:underline font-medium"
             onClick={() => handleViewJobApplicants(row.original)}
           >
-            {jobApplicants.length} applicants
+            {applicantCount} applicant{applicantCount !== 1 ? 's' : ''}
           </div>
         );
       },
@@ -699,9 +888,10 @@ function CompanyDashboardPage() {
   };
 
   const handleApplicantClick = (applicant) => {
-    setSelectedApplicant(applicant)
-    setIsDrawerOpen(true)
-  }
+    setSelectedApplicant(applicant);
+    setIsDrawerOpen(true);
+    clearParsedData();
+  };
 
   const handleBackToJobs = () => {
     setSelectedJob(null);
@@ -709,70 +899,135 @@ function CompanyDashboardPage() {
     setActiveView('jobs');
   };
 
-  // Resume Parser functions
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-      setUploadedFile(file)
-      setIsUploading(true)
-      setUploadProgress(0)
-      
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            setIsUploading(false)
-            analyzeResume(file)
-            return 100
-          }
-          return prev + 10
-        })
-      }, 200)
+  // Resume Parser functions - Parse applicant's existing resume
+  const handleParseApplicantResume = async (documentId) => {
+    if (!documentId) {
+      alert('No resume found for this applicant');
+      return;
     }
-  }
 
-  const analyzeResume = async (file) => {
-    setIsAnalyzing(true)
-    
-    setTimeout(() => {
-      const mockSkills = [
-        "React", "JavaScript", "Node.js", "Python", "TypeScript", 
-        "AWS", "Docker", "Git", "MongoDB", "PostgreSQL", "CSS", "HTML",
-        "Project Management", "Team Leadership", "Agile", "Scrum"
-      ]
+    setIsParsing(true);
+    setParseError("");
+    setParsedData(null);
+    setExtractedSkills([]);
+    setAnalysisComplete(false);
+
+    try {
+      const token = localStorage.getItem("token");
       
-      const mockParsedData = {
-        name: "Joshua Dee Tulali",
-        email: "joshua.tulali@email.com",
-        phone: "+63 9151 68 0095",
-        experience: "5 years",
-        education: "BS Computer Science",
-        skills: mockSkills,
-        summary: "Experienced software engineer with 5 years of experience in full-stack development.",
-        workExperience: [
-          {
-            company: "TechCorp Philippines",
-            position: "Senior Software Engineer",
-            duration: "2022 - Present",
-            description: "Led development of web applications using React and Node.js"
-          }
-        ]
+      console.log(`📄 Attempting to parse document ID: ${documentId}`);
+      
+      const checkResponse = await axios.get(`${URL}/getResumeData/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log("Document status:", checkResponse.data);
+
+      if (checkResponse.data.document.isParsed) {
+        const parsedResumeData = checkResponse.data.parsedData;
+        setParsedData(parsedResumeData);
+        
+        if (parsedResumeData.skills && parsedResumeData.skills.length > 0) {
+          const skillNames = parsedResumeData.skills.map(s => s.name);
+          setExtractedSkills(skillNames);
+        }
+        
+        setIsParsing(false);
+        setAnalysisComplete(true);
+        console.log("✅ Using existing parsed data");
+      } else if (checkResponse.data.document.parseFailed) {
+        console.log("⚠️ Previous parsing failed, retrying...");
+        await axios.post(`${URL}/parseResume/${documentId}`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        pollForParsedData(documentId);
+      } else {
+        console.log("🚀 Triggering new parse...");
+        const parseResponse = await axios.post(`${URL}/parseResume/${documentId}`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log("Parse triggered:", parseResponse.data);
+        pollForParsedData(documentId);
       }
-      
-      setExtractedSkills(mockSkills)
-      setParsedData(mockParsedData)
-      setAnalysisComplete(true)
-      setIsAnalyzing(false)
-    }, 3000)
-  }
 
-  const removeFile = () => {
-    setUploadedFile(null)
-    setUploadProgress(0)
-    setExtractedSkills([])
-    setParsedData(null)
-    setAnalysisComplete(false)
-  }
+    } catch (error) {
+      console.error('❌ Error parsing resume:', error);
+      console.error('Error details:', error.response?.data);
+      setIsParsing(false);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Error parsing resume';
+      setParseError(errorMessage);
+      
+      alert(`Failed to parse resume: ${errorMessage}`);
+    }
+  };
+
+  // Add this function to poll for parsed data
+  const pollForParsedData = async (documentId) => {
+    const maxAttempts = 20;
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${URL}/getResumeData/${documentId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.document.isParsed) {
+          const parsedResumeData = response.data.parsedData;
+          setParsedData(parsedResumeData);
+          
+          if (parsedResumeData.skills && parsedResumeData.skills.length > 0) {
+            const skillNames = parsedResumeData.skills.map(s => s.name);
+            setExtractedSkills(skillNames);
+          }
+          
+          setIsParsing(false);
+          setIsParsingComplete(true);
+          setAnalysisComplete(true);
+          
+        } else if (response.data.document.parseFailed) {
+          setIsParsing(false);
+          setParseError(response.data.document.parseError || 'Parsing failed');
+          alert('AI parsing failed. Please try another resume.');
+          
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 3000);
+          } else {
+            setIsParsing(false);
+            setParseError('Parsing timeout. Please try again.');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching parsed data:', error);
+        setIsParsing(false);
+        setParseError('Error fetching parsed data');
+      }
+    };
+
+    poll();
+  };
+
+  // Function to cancel parsing
+  const cancelParsing = () => {
+    setIsParsing(false);
+    setParseError('Parsing cancelled by user');
+    setAnalysisComplete(false);
+  };
+
+  const clearParsedData = () => {
+    setExtractedSkills([]);
+    setParsedData(null);
+    setAnalysisComplete(false);
+    setIsParsing(false);
+    setIsParsingComplete(false);
+    setParseError("");
+  };
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -798,6 +1053,46 @@ function CompanyDashboardPage() {
     }
   }
 
+  // Format notification time
+  const formatNotificationTime = (createdAt) => {
+    const now = new Date();
+    const created = new Date(createdAt);
+    const diffInMinutes = Math.floor((now - created) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'applicant':
+        return <UserPlus className="h-4 w-4 text-blue-500" />;
+      case 'approval':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'alert':
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  // Get notification badge color based on type
+  const getNotificationBadge = (type) => {
+    switch (type) {
+      case 'applicant':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'approval':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'alert':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   // Filter applicants based on search criteria only
   const filteredApplicants = jobApplicants.filter(applicant => {
     const matchesSearch = !searchTerm || 
@@ -816,8 +1111,6 @@ function CompanyDashboardPage() {
         return renderJobsTable()
       case 'job-applicants':
         return renderJobApplicantsTable()
-      case 'resume-parser':
-        return renderResumeParser()
       case 'create-job-posting':
         return renderCreateJobPosting()
       default:
@@ -1211,240 +1504,6 @@ function CompanyDashboardPage() {
     );
   }
 
-  const renderResumeParser = () => (
-    <div className="space-y-6">
-      {/* Upload Section */}
-      <Card className="shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-primary" />
-            Resume Parser
-          </CardTitle>
-          <CardDescription>
-            Upload a resume to extract skills, experience, and qualifications automatically
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!uploadedFile ? (
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 text-center hover:border-primary/50 transition-colors cursor-pointer">
-              <Input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="resume-parser-upload"
-              />
-              <label htmlFor="resume-parser-upload" className="cursor-pointer">
-                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Choose a resume file to parse
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  Drag and drop your resume here, or click to browse files
-                </p>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Choose File
-                </Button>
-                <p className="text-sm text-muted-foreground mt-4">
-                  Supported formats: PDF, DOC, DOCX (Max 10MB)
-                </p>
-              </label>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">Uploading...</span>
-                    <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* File Info */}
-              {uploadedFile && !isUploading && (
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{uploadedFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={removeFile} className="hover:bg-red-50 border-red-200">
-                      <Trash2 className="h-4 w-4 mr-2 text-red-600" />
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Analysis Status */}
-              {isAnalyzing && (
-                <div className="text-center py-8">
-                  <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Analyzing Resume
-                  </h3>
-                  <p className="text-muted-foreground">
-                   Extracting skills and experience from the resume...
-                  </p>
-                </div>
-              )}
-
-              {/* Analysis Complete */}
-              {analysisComplete && (
-                <div className="text-center py-8">
-                  <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Analysis Complete!
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Successfully extracted {extractedSkills.length} skills and parsed resume data.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Extracted Skills */}
-      {extractedSkills.length > 0 && (
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Extracted Skills
-            </CardTitle>
-            <CardDescription>
-              Skills and technologies identified from the resume
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {extractedSkills.map((skill, index) => (
-                <Badge key={index} variant="secondary" className="text-sm bg-blue-50 text-blue-700 border-blue-200">
-                  {skill}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Parsed Data */}
-      {parsedData && (
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5 text-primary" />
-              Parsed Resume Data
-            </CardTitle>
-            <CardDescription>
-              Complete information extracted from the resume
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Name:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.name}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Email:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.email}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Phone:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.phone}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Experience:</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{parsedData.experience}</p>
-                </div>
-              </div>
-
-              {/* Education */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Education:</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{parsedData.education}</p>
-              </div>
-
-              {/* Summary */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Professional Summary:</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{parsedData.summary}</p>
-              </div>
-
-              {/* Work Experience */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Work Experience:</span>
-                </div>
-                <div className="space-y-3">
-                  {parsedData.workExperience.map((job, index) => (
-                    <div key={index} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{job.position}</h4>
-                        <span className="text-xs text-muted-foreground">{job.duration}</span>
-                      </div>
-                      <p className="text-sm font-medium text-primary mb-1">{job.company}</p>
-                      <p className="text-sm text-muted-foreground">{job.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
-
   const renderCreateJobPosting = () => {
     return (
       <div className="max-w-2xl mx-auto">
@@ -1617,8 +1676,9 @@ function CompanyDashboardPage() {
                   type="button"
                   variant="outline" 
                   onClick={() => setActiveView('jobs')}
-                  className="flex-1 border-gray-300 hover:bg-gray-50"
+                  className="flex-1 border-gray-300 hover:bg-gray-50 flex items-center gap-2"
                 >
+                  <X className="h-4 w-4" />
                   Cancel
                 </Button>
                 <Button 
@@ -1652,18 +1712,22 @@ function CompanyDashboardPage() {
     return (
       <Drawer open={isEditJobOpen} onOpenChange={setIsEditJobOpen}>
         <DrawerContent className="max-h-[90vh] flex flex-col">
-          {/* Fixed header */}
-          <DrawerHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
-            <DrawerTitle className="text-2xl font-bold">Edit Job Posting</DrawerTitle>
-            <DrawerDescription className="text-lg">
-              Update the job posting details
-            </DrawerDescription>
+          <DrawerHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b flex items-center justify-between">
+            <div>
+              <DrawerTitle className="text-2xl font-bold">Edit Job Posting</DrawerTitle>
+              <DrawerDescription className="text-lg">
+                Update the job posting details
+              </DrawerDescription>
+            </div>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </DrawerClose>
           </DrawerHeader>
           
-          {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6 space-y-6">
-              {/* Job Title */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Job Title</label>
                 <Input
@@ -1675,7 +1739,6 @@ function CompanyDashboardPage() {
                 />
               </div>
 
-              {/* Location */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Location</label>
                 <Input
@@ -1687,7 +1750,6 @@ function CompanyDashboardPage() {
                 />
               </div>
 
-              {/* Job Type and Status - In one row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <label className="text-sm font-medium">Job Type</label>
@@ -1729,7 +1791,6 @@ function CompanyDashboardPage() {
                 </div>
               </div>
 
-              {/* Min and Max Salary - In one row with labels below */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Salary Range</label>
                 <div className="grid grid-cols-2 gap-4">
@@ -1767,7 +1828,6 @@ function CompanyDashboardPage() {
                 )}
               </div>
 
-              {/* Job Description */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Job Description</label>
                 <Textarea
@@ -1781,7 +1841,6 @@ function CompanyDashboardPage() {
             </div>
           </div>
           
-          {/* Fixed footer with buttons - always visible */}
           <DrawerFooter className="px-6 pb-6 pt-4 border-t bg-white flex-shrink-0">
             <div className="flex gap-3 w-full">
               <Button 
@@ -1795,8 +1854,9 @@ function CompanyDashboardPage() {
               <Button 
                 variant="outline"
                 onClick={() => setIsEditJobOpen(false)}
-                className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50"
+                className="flex-1 h-12 text-base border-gray-300 hover:bg-gray-50 flex items-center gap-2"
               >
+                <X className="h-4 w-4" />
                 Cancel
               </Button>
             </div>
@@ -1858,10 +1918,10 @@ function CompanyDashboardPage() {
               <Button 
                 variant="outline" 
                 onClick={handleLogout}
-                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-2"
                 size="sm"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4" />
                 Logout
               </Button>
             </div>
@@ -1869,9 +1929,7 @@ function CompanyDashboardPage() {
         </Sidebar>
         
         <div className="flex-1 flex flex-col">
-          {/* Main Content Area */}
           <div className="flex-1 flex flex-col">
-            {/* Header */}
             <div className="bg-white border-b border-gray-200 shadow-sm">
               <div className="px-6 py-4">
                 <div className="flex items-center justify-between">
@@ -1890,32 +1948,172 @@ function CompanyDashboardPage() {
                       </p>
                     </div>
                   </div>
-                  {/* REMOVED search and filter from global header */}
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={toggleNotifications}
+                        className="relative h-10 w-10 rounded-full hover:bg-gray-100 transition-colors"
+                      >
+                        <Bell className="h-5 w-5" />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white animate-pulse">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
+                      </Button>
+                      
+                      {showNotifications && (
+                        <div className="absolute right-0 top-12 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-in fade-in-0 zoom-in-95">
+                          <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold text-lg text-gray-900">Notifications</h3>
+                              <div className="flex items-center gap-2">
+                                {unreadCount > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={markAllAsRead}
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 flex items-center gap-1"
+                                  >
+                                    <CheckCircle className="h-3 w-3" />
+                                    Mark all as read
+                                  </Button>
+                                )}
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                  {unreadCount} unread
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="max-h-96 overflow-y-auto">
+                            {notifications.length > 0 ? (
+                              <div className="divide-y divide-gray-100">
+                                {notifications.map((notification) => (
+                                  <div
+                                    key={notification.id}
+                                    className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                      !notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                                    }`}
+                                    onClick={() => handleNotificationClick(notification)}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex-shrink-0 mt-0.5">
+                                        {getNotificationIcon(notification.type)}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <p className="font-medium text-sm text-gray-900">
+                                            {notification.title}
+                                          </p>
+                                          <Badge 
+                                            variant="secondary" 
+                                            className={`text-xs ${getNotificationBadge(notification.type)}`}
+                                          >
+                                            {notification.type}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                          {notification.message}
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-2">
+                                          {formatNotificationTime(notification.createdAt)}
+                                        </p>
+                                      </div>
+                                      {!notification.read && (
+                                        <div className="flex-shrink-0">
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-8 text-center">
+                                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 text-sm">No notifications yet</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                  You'll be notified about new applicants and job updates
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                            <div className="flex items-center justify-between">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowNotifications(false)}
+                                className="text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 flex items-center gap-1"
+                              >
+                                <X className="h-4 w-4" />
+                                Close
+                              </Button>
+                              {notifications.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setNotifications([])}
+                                  className="text-sm text-red-600 hover:text-red-800 hover:bg-red-50 flex items-center gap-1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Clear All
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">
+                          {user.fullName || 'HR Manager'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {user.company || 'Company Account'}
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="h-4 w-4 text-blue-600" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Content */}
             <div className="flex-1 p-6">
               {renderContent()}
             </div>
           </div>
         </div>
 
-        {/* Drawer for Applicant Details */}
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerContent>
-            <div className="mx-auto w-full max-w-4xl">
-              <DrawerHeader>
-                <DrawerTitle>Applicant Profile</DrawerTitle>
-                <DrawerDescription>
-                  Detailed view of {selectedApplicant?.name}'s application
-                </DrawerDescription>
+            <div className="mx-auto w-full max-w-5xl">
+              <DrawerHeader className="flex items-center justify-between">
+                <div>
+                  <DrawerTitle>Applicant Profile</DrawerTitle>
+                  <DrawerDescription>
+                    Detailed view of {selectedApplicant?.name}'s application
+                  </DrawerDescription>
+                </div>
+                <DrawerClose asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DrawerClose>
               </DrawerHeader>
               <div className="p-6">
                 {selectedApplicant && (
                   <div className="space-y-6">
-                    {/* Header */}
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                         <Users className="h-8 w-8 text-blue-600" />
@@ -1929,7 +2127,6 @@ function CompanyDashboardPage() {
                       </div>
                     </div>
                     
-                    {/* Contact Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
@@ -1958,7 +2155,6 @@ function CompanyDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Skills Section */}
                     {selectedApplicant.skills && selectedApplicant.skills.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="font-medium flex items-center gap-2">
@@ -1975,7 +2171,153 @@ function CompanyDashboardPage() {
                       </div>
                     )}
 
-                    {/* Education */}
+                    {extractedSkills.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-blue-600" />
+                          AI Extracted Skills ({extractedSkills.length})
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {extractedSkills.map((skill, index) => (
+                            <Badge key={index} variant="secondary" className="text-sm bg-purple-50 text-purple-700 border-purple-200">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {parseError && (
+                      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-red-900 mb-1">Parsing Failed</h4>
+                            <p className="text-sm text-red-700">{parseError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isParsing && !parseError && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg relative">
+                        <div className="flex items-center gap-3">
+                          <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-blue-900">AI is Analyzing Resume</h4>
+                            <p className="text-sm text-blue-700">
+                              Extracting skills, experience, and qualifications... (10-30 seconds)
+                            </p>
+                          </div>
+                        </div>
+                        {/* Close button for parsing */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={cancelParsing}
+                          className="absolute top-3 right-3 h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          title="Cancel parsing"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {parsedData && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="font-semibold flex items-center gap-2 text-lg">
+                          <Sparkles className="h-5 w-5 text-blue-600" />
+                          AI Parsed Resume Data
+                        </h4>
+
+                        <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            {parsedData.totalYearsExperience > 0 && (
+                              <div className="p-2 bg-white rounded border">
+                                <p className="text-xs text-muted-foreground">Experience</p>
+                                <p className="font-medium">{parsedData.totalYearsExperience} years</p>
+                              </div>
+                            )}
+                            {parsedData.location && (
+                              <div className="p-2 bg-white rounded border">
+                                <p className="text-xs text-muted-foreground">Location</p>
+                                <p className="font-medium text-sm">{parsedData.location}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {parsedData.summary && (
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">Professional Summary:</p>
+                              <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                                <p className="text-sm text-muted-foreground leading-relaxed break-words whitespace-pre-wrap">
+                                  {parsedData.summary}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedData.workExperience && parsedData.workExperience.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Work Experience:</p>
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {parsedData.workExperience.map((job, index) => (
+                                  <div key={index} className="p-2 bg-white rounded border text-sm">
+                                    <p className="font-medium">{job.jobTitle}</p>
+                                    <p className="text-xs text-muted-foreground">{job.organization}</p>
+                                    {job.duration && (
+                                      <p className="text-xs text-muted-foreground">{job.duration}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedData.education && parsedData.education.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Education:</p>
+                              <div className="space-y-2">
+                                {parsedData.education.map((edu, index) => (
+                                  <div key={index} className="p-2 bg-white rounded border text-sm">
+                                    <p className="font-medium">{edu.degree}</p>
+                                    {edu.institution && (
+                                      <p className="text-xs text-muted-foreground">{edu.institution}</p>
+                                    )}
+                                    {edu.year && (
+                                      <p className="text-xs text-muted-foreground">{edu.year}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {parsedData.skills && parsedData.skills.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Skills:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedData.skills.map((skill, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {typeof skill === 'string' ? skill : skill.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {parseError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {parseError}
+                        </p>
+                      </div>
+                    )}
+
                     {selectedApplicant.education && (
                       <div className="space-y-2">
                         <h4 className="font-medium flex items-center gap-2">
@@ -1986,7 +2328,6 @@ function CompanyDashboardPage() {
                       </div>
                     )}
 
-                    {/* Notes */}
                     {selectedApplicant.notes && (
                       <div className="space-y-2">
                         <h4 className="font-medium flex items-center gap-2">
@@ -2000,6 +2341,17 @@ function CompanyDashboardPage() {
                 )}
               </div>
               <DrawerFooter>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    className="flex-1 border-purple-200 hover:bg-purple-50 text-purple-700"
+                    onClick={() => selectedApplicant?.Document?.id && handleParseApplicantResume(selectedApplicant.Document.id)}
+                    disabled={!selectedApplicant?.Document?.id || isParsing}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {isParsing ? 'Parsing...' : parsedData ? 'Re-parse Resume' : 'Parse Resume with AI'}
+                  </Button>
+                </div>
                 <div className="flex gap-2">
                   <Button 
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
@@ -2046,7 +2398,8 @@ function CompanyDashboardPage() {
                   </Button>
                 </div>
                 <DrawerClose asChild>
-                  <Button variant="outline" className="w-full border-gray-300 hover:bg-gray-50">
+                  <Button variant="outline" className="w-full border-gray-300 hover:bg-gray-50 flex items-center gap-2">
+                    <X className="h-4 w-4" />
                     Close
                   </Button>
                 </DrawerClose>
@@ -2055,7 +2408,6 @@ function CompanyDashboardPage() {
           </DrawerContent>
         </Drawer>
 
-        {/* Edit Job Drawer */}
         {renderEditJobForm()}
       </div>
     </SidebarProvider>
