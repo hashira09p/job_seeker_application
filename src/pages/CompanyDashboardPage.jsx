@@ -475,7 +475,7 @@ function CompanyDashboardPage() {
               applicantId: applicantId,
               jobId: job.id, // Use the job's ID
               position: job.title,
-              name: applicant.name || applicant.fullName || 'Unknown Applicant',
+              name: applicant.name || applicant.user.fullName || 'Unknown Applicant',
               email: applicant.email || '',
               status: applicant.status || 'pending',
               appliedDate: applicant.createdAt ? new Date(applicant.createdAt).toLocaleDateString() : 'Not specified',
