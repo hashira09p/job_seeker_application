@@ -152,9 +152,7 @@ app.post("/submit-signup", upload.single("document"), async (req, res) => {
             approved: "underReview"
           });
 
-          console.log(user.id)
-
-          await Companies.create({
+          const company = await Companies.create({
             name: companyName,
             description: description,
             userID: user.id,
@@ -171,6 +169,15 @@ app.post("/submit-signup", upload.single("document"), async (req, res) => {
               fileDir: req.file.path
             });
           }
+
+          console.log(company.name)
+
+          io.emit('newEmployerRegistration', {
+            employerId: user.id,
+            companyName: company.name,
+            employerName: user.fullName
+          });
+
         }else{
           const user = await Users.create({
             firstName: firstName,
@@ -449,6 +456,12 @@ app.post("/jobPostingSubmit", authenticateToken, async(req,res) => {
       status: "active",
       reviewed: false
     })
+
+    io.emit('newJobPosting', {
+     jobId: result.id,
+      jobTitle: result.title,
+      companyName: company.name
+    });
 
     // console.log(result)
     res.status(200).json({message:"OK", job:result})

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -54,10 +54,12 @@ import {
   HelpCircle,
   Menu,
   MoreHorizontal,
-  Clock
+  Clock,
+  X
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import io from 'socket.io-client'
 
 function AdminPage() {
   const [activeView, setActiveView] = useState('dashboard')
@@ -69,46 +71,269 @@ function AdminPage() {
   const [jobPostings, setJobPostings] = useState([])
   const navigate = useNavigate()
   const URL = "http://localhost:4000";
+  
+  // Socket reference
+  const socketRef = useRef(null);
+  
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Check if user is authenticated and fetch data
+  // Initialize Socket Connection
   useEffect(() => {
-    async function fetchUserAdmin() {
-      const token = localStorage.getItem('adminToken')
-      
-      if (!token) {
-        navigate('/admin-login')
-        return
-      }
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
 
-      try {
-        const response = await axios.get(`${URL}/fetchData`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        
-        if (response.data.success) {
-          setAdminUser(response.data.currentAdmin)
-          // Handle both possible field names from backend
-          setEmployersDocuments(response.data.employersDocuments || response.data.employeesDocuments || [])
-          
-          // Process job postings with applicant counts
-          const processedJobPostings = (response.data.jobPostings || []).map(job => ({
-            ...job,
-            // Get applicant count from the included applicants data
-            applicantCount: job.applicants ? job.applicants.length : 0
-          }))
-          setJobPostings(processedJobPostings)
-        }
-      } catch (err) {
-        console.log('Error fetching admin data:', err.message)
-        localStorage.removeItem('adminToken')
-        navigate('/admin-login')
+    // Initialize socket connection
+    socketRef.current = io("http://localhost:3000", {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    // Socket event listeners
+    socketRef.current.on('connect', () => {
+      console.log('Connected to admin server via WebSocket');
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from admin server');
+    });
+
+    // Listen for new employer registrations from your backend
+    socketRef.current.on('newEmployerRegistration', (data) => {
+      console.log('New employer registration received:', data);
+      
+      // Add notification for new employer
+      addNotification({
+        id: Date.now() + Math.random(), // Unique ID
+        title: "New Employer Registration",
+        message: `${data.companyName || data.employerName} has registered and requires approval`,
+        type: "employer",
+        read: false,
+        createdAt: new Date().toISOString(),
+        employerId: data.employerId,
+        companyName: data.companyName || data.employerName
+      });
+      
+      // Refresh data to get the new employer
+      fetchData();
+    });
+
+    // Listen for job posting submissions
+    socketRef.current.on('newJobPosting', (data) => {
+      console.log('New job posting received:', data);
+      
+      addNotification({
+        id: Date.now() + Math.random(),
+        title: "New Job Posting",
+        message: `New job "${data.jobTitle}" posted by ${data.companyName}`,
+        type: "job",
+        read: false,
+        createdAt: new Date().toISOString(),
+        jobId: data.jobId,
+        companyName: data.companyName
+      });
+      
+      fetchData();
+    });
+
+    // Listen for other admin-related events
+    socketRef.current.on('employerApproved', (data) => {
+      console.log('Employer approved:', data);
+      addNotification({
+        id: Date.now() + Math.random(),
+        title: "Employer Approved",
+        message: `${data.companyName} has been approved and can now post jobs`,
+        type: "approval",
+        read: false,
+        createdAt: new Date().toISOString(),
+        employerId: data.employerId
+      });
+    });
+
+    socketRef.current.on('employerRejected', (data) => {
+      console.log('Employer rejected:', data);
+      addNotification({
+        id: Date.now() + Math.random(),
+        title: "Employer Rejected",
+        message: `${data.companyName} registration was rejected`,
+        type: "alert",
+        read: false,
+        createdAt: new Date().toISOString(),
+        employerId: data.employerId
+      });
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
       }
+    };
+  }, []);
+
+  // Add notification to state
+  const addNotification = (notification) => {
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+    
+    // Show browser notification if permitted
+    if (Notification.permission === 'granted') {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        tag: 'admin-notification'
+      });
     }
     
-    fetchUserAdmin()
+    // Auto-hide notification after 5 seconds
+    setTimeout(() => {
+      setShowNotifications(false);
+    }, 5000);
+  };
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Mark notification as read
+  const markAsRead = async (notificationId) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  // Mark all as read
+  const markAllAsRead = async () => {
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    setUnreadCount(0);
+  };
+
+  // Toggle notifications dropdown
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && unreadCount > 0) {
+      markAllAsRead();
+    }
+  };
+
+  // Handle notification click (navigate to relevant page)
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    setShowNotifications(false);
+
+    switch (notification.type) {
+      case 'employer':
+        setActiveView('employers');
+        // Optional: Scroll to or highlight the specific employer
+        break;
+      case 'job':
+        setActiveView('jobs');
+        break;
+      case 'approval':
+      case 'alert':
+        setActiveView('employers');
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Format notification time
+  const formatNotificationTime = (createdAt) => {
+    const now = new Date();
+    const created = new Date(createdAt);
+    const diffInMinutes = Math.floor((now - created) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'employer':
+        return <Users className="h-4 w-4 text-blue-500" />;
+      case 'job':
+        return <Briefcase className="h-4 w-4 text-green-500" />;
+      case 'approval':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'alert':
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  // Get notification badge color based on type
+  const getNotificationBadge = (type) => {
+    switch (type) {
+      case 'employer':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'job':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'approval':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'alert':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Check if user is authenticated and fetch data
+  const fetchData = async () => {
+    const token = localStorage.getItem('adminToken')
+    
+    if (!token) {
+      navigate('/admin-login')
+      return
+    }
+
+    try {
+      const response = await axios.get(`${URL}/fetchData`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.data.success) {
+        setAdminUser(response.data.currentAdmin)
+        // Handle both possible field names from backend
+        setEmployersDocuments(response.data.employersDocuments || response.data.employeesDocuments || [])
+        
+        // Process job postings with applicant counts
+        const processedJobPostings = (response.data.jobPostings || []).map(job => ({
+          ...job,
+          // Get applicant count from the included applicants data
+          applicantCount: job.applicants ? job.applicants.length : 0
+        }))
+        setJobPostings(processedJobPostings)
+      }
+    } catch (err) {
+      console.log('Error fetching admin data:', err.message)
+      localStorage.removeItem('adminToken')
+      navigate('/admin-login')
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
   }, [navigate])
 
   const handleLogout = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
     localStorage.removeItem('adminToken')
     localStorage.removeItem('adminUser')
     navigate('/admin-login')
@@ -243,22 +468,7 @@ function AdminPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
-      const token = localStorage.getItem('adminToken')
-      const response = await axios.get(`${URL}/fetchData`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      
-      if (response.data.success) {
-        setAdminUser(response.data.currentAdmin)
-        setEmployersDocuments(response.data.employersDocuments || response.data.employeesDocuments || [])
-        
-        // Process job postings with applicant counts
-        const processedJobPostings = (response.data.jobPostings || []).map(job => ({
-          ...job,
-          applicantCount: job.applicants ? job.applicants.length : 0
-        }))
-        setJobPostings(processedJobPostings)
-      }
+      await fetchData()
     } catch (err) {
       console.log('Error refreshing data:', err.message)
     } finally {
@@ -1004,10 +1214,126 @@ function AdminPage() {
             </div>
             
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="relative p-2 text-gray-500 hover:text-gray-700">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-              </Button>
+              {/* Notifications Bell */}
+              <div className="relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="relative p-2 text-gray-500 hover:text-gray-700"
+                  onClick={toggleNotifications}
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                  )}
+                </Button>
+                
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 top-12 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-in fade-in-0 zoom-in-95">
+                    <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-lg text-gray-900">Notifications</h3>
+                        <div className="flex items-center gap-2">
+                          {unreadCount > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={markAllAsRead}
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 flex items-center gap-1"
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              Mark all as read
+                            </Button>
+                          )}
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                            {unreadCount} unread
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y divide-gray-100">
+                          {notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                !notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                              }`}
+                              onClick={() => handleNotificationClick(notification)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 mt-0.5">
+                                  {getNotificationIcon(notification.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="font-medium text-sm text-gray-900">
+                                      {notification.title}
+                                    </p>
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={`text-xs ${getNotificationBadge(notification.type)}`}
+                                    >
+                                      {notification.type}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-2">
+                                    {formatNotificationTime(notification.createdAt)}
+                                  </p>
+                                </div>
+                                {!notification.read && (
+                                  <div className="flex-shrink-0">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center">
+                          <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500 text-sm">No notifications yet</p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            You'll be notified about new employers and job postings
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowNotifications(false)}
+                          className="text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 flex items-center gap-1"
+                        >
+                          <X className="h-4 w-4" />
+                          Close
+                        </Button>
+                        {notifications.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setNotifications([])}
+                            className="text-sm text-red-600 hover:text-red-800 hover:bg-red-50 flex items-center gap-1"
+                          >
+                            <X className="h-4 w-4" />
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <Button variant="ghost" size="sm" className="p-2 text-gray-500 hover:text-gray-700">
                 <HelpCircle className="h-5 w-5" />
