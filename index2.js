@@ -160,9 +160,23 @@ app.get("/fetchData", authenticateToken, async(req, res) => {
         model: Users,
         as: "user",
         attributes: ["id", "firstName", "lastName", "email", "role", "fullName",    "approved"],
-        where: { role: "Employer" } // Filter by user role
+        where: { role: "Employer" }, // Filter by user role
+        include:{
+          model: Companies,
+          as: "company",
+          include:{
+            model:JobPostings,
+            as: "jobPostings",
+            include:{
+              model:Applicants,
+              as: "applicants"
+            }
+          }
+        }
       }]
     });
+
+    employersDocuments.map(employer => console.log(employer.user.company.jobPostings.map(jobPosting => console.log(jobPosting.applicants.map(applicant => console.log(applicant.name))))))
 
     const jobPostings = await JobPostings.findAll({
       include:[{

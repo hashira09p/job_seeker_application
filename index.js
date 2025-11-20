@@ -318,7 +318,8 @@ app.get("/jobPostings/:id/applicants", authenticateToken, async(req, res) => {
       include: [
         {
           model: Users,
-           attributes: ['id', 'email'] // Only return specific fields
+          as: "user",
+          attributes: ['id', 'email'] // Only return specific fields
         },
         {
           model: Documents,
@@ -633,7 +634,8 @@ async function parseResumeAsync(documentId, filePath, userId) {
     console.log(`✅ AI parsing completed for document ${documentId}`);
     
   } catch (error) {
-    console.error(`❌ Error parsing resume ${documentId}:`, error.message);
+    console.error("❌ Affinda Error:", error.response?.data || error);
+
     
     // Mark parsing as failed
     await Documents.update({

@@ -55,7 +55,8 @@ import {
   Menu,
   MoreHorizontal,
   Clock,
-  X
+  X,
+  Target
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -69,6 +70,7 @@ function AdminPage() {
   const [adminUser, setAdminUser] = useState(null)
   const [employersDocuments, setEmployersDocuments] = useState([])
   const [jobPostings, setJobPostings] = useState([])
+  const [companies, setCompanies] = useState([])
   const navigate = useNavigate()
   const URL = "http://localhost:4000";
   
@@ -234,10 +236,12 @@ function AdminPage() {
     switch (notification.type) {
       case 'employer':
         setActiveView('employers');
-        // Optional: Scroll to or highlight the specific employer
         break;
       case 'job':
         setActiveView('jobs');
+        break;
+      case 'company':
+        setActiveView('companies');
         break;
       case 'approval':
       case 'alert':
@@ -267,6 +271,8 @@ function AdminPage() {
         return <Users className="h-4 w-4 text-blue-500" />;
       case 'job':
         return <Briefcase className="h-4 w-4 text-green-500" />;
+      case 'company':
+        return <Building className="h-4 w-4 text-purple-500" />;
       case 'approval':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'alert':
@@ -283,6 +289,8 @@ function AdminPage() {
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'job':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'company':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'approval':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'alert':
@@ -318,12 +326,65 @@ function AdminPage() {
           applicantCount: job.applicants ? job.applicants.length : 0
         }))
         setJobPostings(processedJobPostings)
+
+        // Process companies data from employersDocuments
+        const companiesData = processCompaniesData(response.data.employersDocuments || response.data.employeesDocuments || [])
+        setCompanies(companiesData)
       }
     } catch (err) {
       console.log('Error fetching admin data:', err.message)
       localStorage.removeItem('adminToken')
       navigate('/admin-login')
     }
+  }
+
+  // Process companies data from employers documents
+  const processCompaniesData = (employersDocs) => {
+    const companiesMap = new Map()
+
+    employersDocs.forEach(employerDoc => {
+      const company = employerDoc.user?.company
+      if (company) {
+        const companyId = company.id
+        
+        if (!companiesMap.has(companyId)) {
+          companiesMap.set(companyId, {
+            ...company,
+            employers: [],
+            totalJobPostings: 0,
+            totalApplicants: 0,
+            totalHiredApplicants: 0,
+            activeJobs: 0
+          })
+        }
+
+        const companyData = companiesMap.get(companyId)
+        companyData.employers.push(employerDoc.user)
+
+        // Calculate job postings and applicants
+        if (company.jobPostings) {
+          company.jobPostings.forEach(jobPosting => {
+            companyData.totalJobPostings++
+            if (jobPosting.status === 'active') {
+              companyData.activeJobs++
+            }
+            
+            // Calculate applicants and hired applicants
+            if (jobPosting.applicants) {
+              companyData.totalApplicants += jobPosting.applicants.length
+              
+              // Count hired applicants (you might need to adjust this based on your actual data structure)
+              const hiredCount = jobPosting.applicants.filter(applicant => 
+                applicant.status === 'hired' || applicant.hired === true
+              ).length
+              companyData.totalHiredApplicants += hiredCount
+            }
+          })
+        }
+      }
+    })
+
+    return Array.from(companiesMap.values())
   }
 
   useEffect(() => {
@@ -471,10 +532,16 @@ function AdminPage() {
       badge: null
     },
     {
-      title: "Employer Management",
+      title: "Employer Approval",
       icon: Users,
       view: "employers",
       badge: employersDocuments.length.toString()
+    },
+    {
+      title: "Companies",
+      icon: Building,
+      view: "companies",
+      badge: companies.length.toString()
     },
     {
       title: "Job Management",
@@ -503,7 +570,9 @@ function AdminPage() {
     systemUptime: '99.9%',
     responseTime: '128ms',
     serverLoad: '24%',
-    totalApplicants: jobPostings.reduce((total, job) => total + (job.applicantCount || 0), 0)
+    totalApplicants: jobPostings.reduce((total, job) => total + (job.applicantCount || 0), 0),
+    totalCompanies: companies.length,
+    totalHiredApplicants: companies.reduce((total, company) => total + (company.totalHiredApplicants || 0), 0)
   }
 
   const handleRefresh = async () => {
@@ -523,9 +592,12 @@ function AdminPage() {
         emp.user?.id === item.id || emp.id === item.id
       );
       setSelectedItem({ ...fullEmployerData, type });
-    } else {
+    } else if (type === 'job') {
       const fullJobData = jobPostings.find(job => job.id === item.id);
       setSelectedItem({ ...fullJobData, type });
+    } else if (type === 'company') {
+      const fullCompanyData = companies.find(company => company.id === item.id);
+      setSelectedItem({ ...fullCompanyData, type });
     }
     setIsDrawerOpen(true);
   };
@@ -641,6 +713,26 @@ function AdminPage() {
       applicants: job.applicantCount || 0, // Use the actual applicant count from backend
       views: Math.floor(Math.random() * 500),
       rawData: job
+    }))
+  }
+
+  // Format companies data for the table
+  const formatCompaniesForTable = () => {
+    return companies.map(company => ({
+      id: company.id,
+      name: company.name || 'Unknown Company',
+      industry: company.industry || 'N/A',
+      contactEmail: company.contactEmail || company.employers?.[0]?.email || 'N/A',
+      phone: company.phone || 'N/A',
+      website: company.website || 'N/A',
+      location: company.location || 'N/A',
+      totalEmployers: company.employers?.length || 0,
+      totalJobPostings: company.totalJobPostings || 0,
+      activeJobs: company.activeJobs || 0,
+      totalApplicants: company.totalApplicants || 0,
+      totalHiredApplicants: company.totalHiredApplicants || 0,
+      joinDate: company.createdAt ? new Date(company.createdAt).toLocaleDateString() : 'N/A',
+      rawData: company
     }))
   }
 
@@ -898,6 +990,93 @@ function AdminPage() {
     },
   ]
 
+  const companiesColumns = [
+    {
+      accessorKey: "name",
+      header: "Company Details",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <Building className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-gray-900">{row.getValue("name")}</div>
+            <div className="text-sm text-gray-500">{row.original.industry}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                {row.original.totalEmployers} employers
+              </Badge>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "contactEmail",
+      header: "Contact",
+      cell: ({ row }) => (
+        <div className="text-sm">
+          <div className="font-medium text-gray-900">{row.getValue("contactEmail")}</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "totalJobPostings",
+      header: "Job Postings",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <div className="text-sm font-bold text-gray-900">{row.getValue("totalJobPostings")}</div>
+          <div className="text-xs text-gray-500">
+            {row.original.activeJobs} active
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "totalApplicants",
+      header: "Applicants",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <div className="text-sm font-bold text-gray-900">{row.getValue("totalApplicants")}</div>
+          <div className="text-xs text-gray-500">total</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "totalHiredApplicants",
+      header: "Hired",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <div className="text-sm font-bold text-green-600">{row.getValue("totalHiredApplicants")}</div>
+          <div className="text-xs text-gray-500">successful hires</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "joinDate",
+      header: "Registered",
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-900">{row.getValue("joinDate")}</div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 w-8 p-0 hover:bg-gray-50 text-gray-600 border-gray-200"
+            onClick={() => handleRowClick(row.original, 'company')}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
+
   // Render different views based on activeView
   const renderMainContent = () => {
     switch (activeView) {
@@ -918,6 +1097,21 @@ function AdminPage() {
             
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Total Companies</CardTitle>
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Building className="h-4 w-4 text-purple-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gray-900">{systemStats.totalCompanies}</div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Registered companies
+                  </p>
+                </CardContent>
+              </Card>
+
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">Total Employers</CardTitle>
@@ -960,30 +1154,15 @@ function AdminPage() {
               
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Total Applicants</CardTitle>
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Users className="h-4 w-4 text-purple-600" />
+                  <CardTitle className="text-sm font-medium text-gray-600">Successful Hires</CardTitle>
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <Target className="h-4 w-4 text-emerald-600" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">{systemStats.totalApplicants}</div>
+                  <div className="text-2xl font-bold text-gray-900">{systemStats.totalHiredApplicants}</div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Across all job postings
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="border border-gray-200 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-orange-600" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">{systemStats.systemUptime}</div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Response: {systemStats.responseTime} • Load: {systemStats.serverLoad}
+                    Total hired applicants
                   </p>
                 </CardContent>
               </Card>
@@ -1026,6 +1205,42 @@ function AdminPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="bg-gray-50 border-b">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Building className="h-5 w-5 text-purple-500" />
+                    Company Insights
+                  </CardTitle>
+                  <CardDescription>Performance overview</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Target className="h-5 w-5 text-purple-600" />
+                      <div>
+                        <p className="font-medium text-purple-900">Hiring Success</p>
+                        <p className="text-sm text-purple-700">{systemStats.totalHiredApplicants} total hires</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setActiveView('companies')}>
+                      View Companies
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-green-900">Active Recruitment</p>
+                        <p className="text-sm text-green-700">{systemStats.totalApplicants} total applicants</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setActiveView('jobs')}>
+                      View Jobs
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )
@@ -1062,6 +1277,44 @@ function AdminPage() {
                   columns={employersColumns} 
                   data={formatEmployersForTable()}
                   onRowClick={(row) => handleRowClick(row.original, 'employer')}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )
+      
+      case 'companies':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Company Management</h1>
+                <p className="text-gray-600">View company performance and hiring statistics</p>
+              </div>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Search companies..." className="pl-10 w-64 border-gray-300" />
+                </div>
+                <Button onClick={handleRefresh} disabled={isRefreshing} variant="outline" className="border-gray-300">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+            
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="text-lg">Companies Directory</CardTitle>
+                <CardDescription>
+                  {companies.length} registered companies • {systemStats.totalHiredApplicants} successful hires
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <DataTable 
+                  columns={companiesColumns} 
+                  data={formatCompaniesForTable()}
+                  onRowClick={(row) => handleRowClick(row.original, 'company')}
                 />
               </CardContent>
             </Card>
@@ -1155,7 +1408,7 @@ function AdminPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm text-gray-600">Total Records</span>
-                      <Badge variant="secondary">{systemStats.totalUsers + systemStats.totalJobs}</Badge>
+                      <Badge variant="secondary">{systemStats.totalUsers + systemStats.totalJobs + systemStats.totalCompanies}</Badge>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm text-gray-600">Cache Hit Rate</span>
@@ -1405,7 +1658,8 @@ function AdminPage() {
           <DrawerContent className="max-h-[80vh] border border-gray-200">
             <DrawerHeader className="bg-gray-50 border-b border-gray-200">
               <DrawerTitle className="text-lg">
-                {selectedItem?.type === 'employer' ? 'Employer Details' : 'Job Details'}
+                {selectedItem?.type === 'employer' ? 'Employer Details' : 
+                 selectedItem?.type === 'company' ? 'Company Details' : 'Job Details'}
               </DrawerTitle>
               <DrawerDescription>
                 View detailed information about this {selectedItem?.type}
@@ -1616,6 +1870,78 @@ function AdminPage() {
                             Mark as Pending Review
                           </Button>
                         )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : selectedItem?.type === 'company' ? (
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Company Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Company Name</label>
+                          <p className="font-medium">{selectedItem.name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Industry</label>
+                          <p className="font-medium">{selectedItem.industry || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Contact Email</label>
+                          <p className="font-medium">{selectedItem.contactEmail || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                          <p className="font-medium">{selectedItem.phone || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Website</label>
+                          <p className="font-medium">{selectedItem.website || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Location</label>
+                          <p className="font-medium">{selectedItem.location || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Registered Employers</label>
+                          <p className="font-medium">{selectedItem.employers?.length || 0}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Registration Date</label>
+                          <p className="font-medium">
+                            {selectedItem.createdAt ? new Date(selectedItem.createdAt).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Company Performance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">{selectedItem.totalJobPostings || 0}</div>
+                          <div className="text-sm text-blue-800">Total Jobs</div>
+                        </div>
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{selectedItem.activeJobs || 0}</div>
+                          <div className="text-sm text-green-800">Active Jobs</div>
+                        </div>
+                        <div className="text-center p-4 bg-purple-50 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-600">{selectedItem.totalApplicants || 0}</div>
+                          <div className="text-sm text-purple-800">Total Applicants</div>
+                        </div>
+                        <div className="text-center p-4 bg-emerald-50 rounded-lg">
+                          <div className="text-2xl font-bold text-emerald-600">{selectedItem.totalHiredApplicants || 0}</div>
+                          <div className="text-sm text-emerald-800">Successful Hires</div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
